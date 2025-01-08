@@ -143,8 +143,7 @@ install_mysql() {
 install_nginx(){
     # 启动 Nginx 容器
     echo "启动 Nginx 容器..."
-    docker run -d \
-        --name nginx \
+    docker run -d --name nginx \
         --health-cmd="curl -f http://localhost || exit 1" \
         --health-interval=5s \
         --health-timeout=3s \
@@ -152,7 +151,7 @@ install_nginx(){
         nginx:latest
 
     # 当容器完全启动再执行docker cp命令
-    while [[ $(docker inspect -f '{{.State.Health.Status}}' nginx) != "healthy" ]]; do
+    while [[ $(docker inspect --format='{{.State.Health}}' nginx) != "healthy" ]]; do
         sleep 1
     done
 

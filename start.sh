@@ -152,7 +152,7 @@ install_nginx(){
 
     # 当容器完全启动再执行docker cp命令
     while [[ $(docker inspect -f '{{.State.Health.Status}}' nginx) != "healthy" ]]; do
-        sleep 1
+        echo "等待 Nginx 容器启动..."
     done
 
     echo "拷贝/etc/nginx文件到到本地文件/opt/docker/config/nginx"

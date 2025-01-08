@@ -151,7 +151,7 @@ install_nginx(){
         nginx:latest
 
     # 当容器完全启动再执行docker cp命令
-    while [[ $(docker inspect --format='{{.State.Health}}' nginx) != "healthy" ]]; do
+    while [[ $(docker inspect -f '{{.State.Health.Status}}' nginx) != "healthy" ]]; do
         sleep 1
     done
 

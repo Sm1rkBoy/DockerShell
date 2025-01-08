@@ -104,7 +104,7 @@ install_mysql() {
     
     # 当容器完全启动再执行docker cp命令
     while [[ $(docker inspect -f '{{.State.Health.Status}}' mysql) != "healthy" ]]; do
-        sleep 1
+        echo "等待 MySQL 容器启动..."
     done
 
     docker cp mysql:/var/lib/mysql /opt/docker/apps && docker cp mysql:/etc/my.cnf /opt/docker/config/mysql
@@ -141,6 +141,9 @@ install_mysql() {
 }
 
 install_nginx(){
+    mkdir -p /opt/docker/config/nginx
+    mkdir -p /opt/docker/log/nginx
+    mkdir -p /opt/docker/compose/nginx
     # 启动 Nginx 容器
     echo "启动 Nginx 容器..."
     docker run -d --name nginx \
@@ -152,7 +155,7 @@ install_nginx(){
 
     # 当容器完全启动再执行docker cp命令
     while [[ $(docker inspect -f '{{.State.Health.Status}}' nginx) != "healthy" ]]; do
-        echo "等待 Nginx 容器启动..."
+        sleep 1
     done
 
     echo "拷贝/etc/nginx文件到到本地文件/opt/docker/config/nginx"

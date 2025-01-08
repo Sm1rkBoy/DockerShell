@@ -6,7 +6,8 @@ services:
         networks:
             universal: null
         volumes:
-            - /opt/docker/apps/nginx:/etc/nginx
+            - /opt/docker/config/nginx:/etc/nginx
+            - /opt/docker/log/nginx:/var/log/nginx 
         ports:
             - 80:80
             - 443:443

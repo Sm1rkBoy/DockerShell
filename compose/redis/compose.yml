@@ -1,0 +1,14 @@
+services:
+    redis:
+        image: redis:latest
+        container_name: redis
+        restart: on-failure:3
+        networks:
+            universal: null
+        volumes:
+            - /opt/docker/redis/apps:/data/
+        # ports:
+        #   - 6379:6379
+networks:
+    universal:
+        external: true

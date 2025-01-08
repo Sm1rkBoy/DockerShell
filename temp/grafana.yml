@@ -1,0 +1,46 @@
+services:
+    grafana:
+        image: grafana/grafana:latest
+        container_name: grafana
+        restart: on-failure:3
+        networks:
+            universal: null
+        volumes:
+            - grafana_data:/var/lib/grafana
+            - grafana_config:/etc/grafana
+            - grafana_log:/var/log/grafana
+        # ports:
+        #   - 3000:3000
+        healthcheck:
+            test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/health']
+            interval: 10s
+            timeout: 10s
+            retries: 10
+            start_period: 10s
+
+volumes:
+    grafana_data:
+        name: grafana_data
+        driver: local
+        driver_opts:
+            type: none
+            device: /opt/docker/grafana/apps
+            o: bind
+    grafana_config:
+        name: grafana_config
+        driver: local
+        driver_opts:
+            type: none
+            device: /opt/docker/grafana/config
+            o: bind
+    grafana_log:
+        name: grafana_log
+        driver: local
+        driver_opts:
+            type: none
+            device: /opt/docker/grafana/log
+            o: bind
+
+networks:
+    universal:
+        external: true

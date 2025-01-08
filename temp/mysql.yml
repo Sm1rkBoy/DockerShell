@@ -1,0 +1,47 @@
+services:
+    mysql:
+        image: mysql:8.4.3
+        container_name: mysql
+        restart: on-failure:3
+        networks:
+            universal: null
+        volumes:
+            - mysql_data:/var/lib/mysql
+            - mysql_log:/var/log/mysql
+            - mysql_config:/etc/my.cnf.d
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+        environment:
+            MYSQL_ROOT_PASSWORD: password
+        command:
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_general_ci
+        # ports:
+        #   - 3306:3306
+
+volumes:
+    mysql_data:
+        name: mysql_data
+        driver: local
+        driver_opts:
+            type: none
+            device: /opt/docker/mysql/apps
+            o: bind
+    mysql_log:
+        name: mysql_log
+        driver: local
+        driver_opts:
+            type: none
+            device: /opt/docker/mysql/log
+            o: bind
+    mysql_config:
+        name: mysql_config
+        driver: local
+        driver_opts:
+            type: none
+            device: /opt/docker/mysql/config
+            o: bind
+
+networks:
+    universal:
+        external: true

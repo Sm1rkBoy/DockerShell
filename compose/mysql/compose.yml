@@ -1,0 +1,24 @@
+services:
+    mysql:
+        image: mysql:8.4.3
+        container_name: mysql
+        restart: on-failure:3
+        networks:
+            universal: null
+        volumes:
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+            - /opt/docker/mysql/apps:/var/lib/mysql
+            - /opt/docker/mysql/log:/var/log/mysql
+            - /opt/docker/mysql/config/my.cnf.d:/etc/my.cnf.d
+        command:
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_general_ci
+        # ports:
+        #   - 3306:3306
+        env_file:
+            - mysql.env
+
+networks:
+    universal:
+        external: true

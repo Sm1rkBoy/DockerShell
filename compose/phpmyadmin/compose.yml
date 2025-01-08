@@ -1,0 +1,14 @@
+services:
+    phpmyadmin:
+        image: phpmyadmin:latest
+        container_name: phpmyadmin
+        restart: on-failure:3
+        # ports:
+        #     - 80:80
+        environment:
+            - PMA_ARBITRARY=1
+        networks:
+            universal: null
+networks:
+    universal:
+        external: true

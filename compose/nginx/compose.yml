@@ -1,0 +1,17 @@
+services:
+    nginx:
+        image: nginx:latest
+        container_name: nginx
+        restart: on-failure:3
+        networks:
+            universal: null
+        volumes:
+            - /opt/docker/nginx/config:/etc/nginx
+            - /opt/docker/nginx/log:/var/log/nginx 
+        ports:
+            - 80:80
+            - 443:443
+
+networks:
+    universal:
+        external: true

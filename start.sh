@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # 检查universal网络是否存在
+echo "正在检查Docker网络设置"
 if docker network inspect universal >/dev/null 2>&1; then
     echo "universal网络已存在"
 else
@@ -9,14 +10,24 @@ else
 fi
 
 # 创建必要的文件夹
+echo "正在创建/opt/docker文件夹"
 mkdir -p /opt/docker/apps
 mkdir -p /opt/docker/config
 mkdir -p /opt/docker/logs
 mkdir -p /opt/docker/compose
 
 # 定义容器列表和选择状态数组
-containers=("mysql" "nginx")
-selected=(0 0)
+containers=("mysql" "nginx" "watchtower" "phpmyadmin")
+selected=()
+
+# 初始化 selected 数组，检查容器是否已安装
+for i in "${!containers[@]}"; do
+    if docker ps -a --format '{{.Names}}' | grep -q "^${containers[$i]}$"; then
+        selected[$i]=1  # 容器已安装，标记为选中
+    else
+        selected[$i]=0  # 容器未安装，标记为未选中
+    fi
+done
 
 # 显示菜单函数
 show_menu() {
@@ -24,13 +35,11 @@ show_menu() {
     echo "请选择要安装的容器 (使用数字切换选择，按e开始安装，按q退出):"
     for i in "${!containers[@]}"; do
         if [ "${selected[$i]}" -eq 1 ]; then
-            echo "[*] $((i+1)). ${containers[$i]}"
+            echo "[*] $((i+1)).${containers[$i]}"
         else
-            echo "[ ] $((i+1)). ${containers[$i]}"
+            echo "[ ] $((i+1)).${containers[$i]}"
         fi
     done
-    echo "q) 退出"
-    echo "e) 执行安装"
 }
 
 # 处理用户输入
@@ -128,6 +137,41 @@ install_mysql() {
         echo "MySQL 安装成功！"
     else
         echo "MySQL 安装失败！"
+    fi
+}
+
+install_nginx(){
+    # 启动 Nginx 容器
+    echo "启动 Nginx 容器..."
+    docker run -d \
+        --name nginx \
+        --health-cmd="curl -f http://localhost || exit 1" \
+        --health-interval=5s \
+        --health-timeout=3s \
+        --health-retries=3 \
+        nginx:latest
+
+    # 当容器完全启动再执行docker cp命令
+    while [[ $(docker inspect -f '{{.State.Health.Status}}' nginx) != "healthy" ]]; do
+        sleep 1
+    done
+
+    echo "拷贝/etc/nginx文件到到本地文件/opt/docker/config/nginx"
+    docker cp nginx:/etc/nginx /opt/docker/config/
+
+    echo "删除临时nginx容器"
+    docker rm -f nginx
+
+    echo "下载nginx的compose.yml文件"
+    wget -O /opt/docker/compose/nginx/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/nginx/compose.yml
+
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/nginx/compose.yml up -d
+
+    if [ $? -eq 0 ]; then
+        echo "Nginx 安装成功！"
+    else
+        echo "Nginx 安装失败！"
     fi
 }
 

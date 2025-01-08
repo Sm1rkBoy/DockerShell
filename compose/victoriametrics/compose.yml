@@ -1,0 +1,21 @@
+services:
+    victoriametrics:
+        image: victoriametrics/victoria-metrics:v1.109.0
+        container_name: victoriametrics
+        restart: on-failure:3
+        networks:
+            universal: null
+        # ports:
+        #     - 8428:8428
+        volumes:
+            - /opt/docker/victoriametrics/apps:/storage
+        command:
+            - --storageDataPath=/storage
+            - --httpListenAddr=:8428
+            - --httpAuth.username=__USERNAME__
+            - --httpAuth.password=__PASSWORD__
+            - --retentionPeriod=90d
+
+networks:
+    universal:
+        external: true

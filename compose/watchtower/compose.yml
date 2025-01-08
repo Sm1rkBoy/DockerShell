@@ -1,0 +1,14 @@
+services:
+    # 1. 自动更新容器
+    watchtower:
+        image: containrrr/watchtower:latest
+        container_name: watchtower
+        restart: on-failure:3
+        network_mode: host
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        environment:
+            - WATCHTOWER_LABEL_ENABLE=true
+        # 自动更新标签
+        labels:
+            com.centurylinklabs.watchtower.enable: true

@@ -163,7 +163,7 @@ install_nginx(){
     docker rm -f nginx
 
     echo "下载nginx的compose.yml文件"
-    wget -O /opt/docker/compose/nginx/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/nginx/compose.yml
+    wget -O /opt/docker/compose/nginx/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/nginx/compose.yml
 
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/nginx/compose.yml up -d

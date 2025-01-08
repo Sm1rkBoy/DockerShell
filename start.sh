@@ -13,7 +13,7 @@ fi
 echo "正在创建/opt/docker文件夹"
 mkdir -p /opt/docker/apps
 mkdir -p /opt/docker/config
-mkdir -p /opt/docker/logs
+mkdir -p /opt/docker/log
 mkdir -p /opt/docker/compose
 
 # 定义容器列表和选择状态数组
@@ -104,7 +104,7 @@ install_mysql() {
     
     # 当容器完全启动再执行docker cp命令
     while [[ $(docker inspect -f '{{.State.Health.Status}}' mysql) != "healthy" ]]; do
-        echo "等待 MySQL 容器启动..."
+        sleep 1
     done
 
     docker cp mysql:/var/lib/mysql /opt/docker/apps && docker cp mysql:/etc/my.cnf /opt/docker/config/mysql

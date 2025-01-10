@@ -18,21 +18,21 @@ mkdir -p /opt/docker/compose # 存放compose文件和.env文件
 
 # 定义容器列表和选择状态数组
 containers=("mysql" "nginx" "watchtower" "phpmyadmin")
-selected=() # 容器对应的状态(1 1 0 0)表示前两个容器已选中，后两个未选中
+selected=() # 容器对应的状态(1 1 0 0)表示前两个容器已选中,后两个未选中
 
-# 初始化 selected 数组，检查容器是否已安装
+# 初始化 selected 数组,检查容器是否已安装
 for i in "${!containers[@]}"; do # !containers[@]表示数组的索引
     if docker ps -a --format '{{.Names}}' | grep -q "^${containers[$i]}$"; then
-        selected[$i]=1  # 容器已安装，标记为选中
+        selected[$i]=1  # 容器已安装,标记为选中
     else
-        selected[$i]=0  # 容器未安装，标记为未选中
+        selected[$i]=0  # 容器未安装,标记为未选中
     fi
 done
 
 # 显示菜单函数
 show_menu() {
     clear
-    echo "请选择要安装的容器 (使用数字切换选择，按e开始安装，按q退出):"
+    echo "请选择要安装的容器 (输入容器对应的数字勾选,按e开始安装,按q退出):"
     for i in "${!containers[@]}"; do
         if [ "${selected[$i]}" -eq 1 ]; then
             echo "[*] $((i+1)).${containers[$i]}"
@@ -97,10 +97,10 @@ install_mysql() {
     read -s -p "请输入MySQL密码(root): " rootPassword
     echo
 
-    # 如果用户没有输入密码，则生成一个随机密码
+    # 如果用户没有输入密码,则生成一个随机密码
     if [ -z "$rootPassword" ]; then
     rootPassword=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
-    echo "未输入密码，已生成随机密码: $rootPassword"
+    echo "未输入密码,已生成随机密码: $rootPassword"
     fi
 
     # 将密码写入 .env 文件
@@ -189,7 +189,7 @@ while true; do
                 if [ "${selected[$i]}" -eq 1 ]; then
                     container_name="${containers[$i]}"
                     if is_container_running "$container_name"; then
-                        echo "容器 $container_name 已经在运行，跳过安装。"
+                        echo "容器 $container_name 已经在运行,跳过安装。"
                     else
                         echo "正在安装的容器是 $container_name..."
                         # 动态调用安装函数
@@ -197,7 +197,7 @@ while true; do
                         if declare -f "$install_function" > /dev/null; then # 判断函数是否被定义
                             $install_function
                         else
-                            echo "未知容器: $container_name，跳过安装。"
+                            echo "未知容器: $container_name,跳过安装。"
                         fi
                     fi
                 fi
@@ -209,7 +209,7 @@ while true; do
             exit 0
             ;;
         *)
-            echo "无效选择，请重新输入。"
+            echo "无效选择,请重新输入。"
             ;;
     esac
 done

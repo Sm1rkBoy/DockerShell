@@ -161,6 +161,7 @@ install_nginx(){
 }
 
 install_watchtower(){
+    mkdir -p /opt/docker/compose/watchtower
     echo "下载watchtower的compose.yml文件"
     echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
     wget -O /opt/docker/compose/watchtower/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/watchtower/compose.yml
@@ -176,6 +177,7 @@ install_watchtower(){
 }
 
 install_phpmyadmin(){
+    mkdir -p /opt/docker/compose/phpmyadmin
     echo "下载 phpmyadmin 的compose.yml文件"
     echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
     wget -O /opt/docker/compose/phpmyadmin/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/phpmyadmin/compose.yml

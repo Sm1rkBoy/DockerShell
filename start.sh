@@ -160,6 +160,17 @@ install_nginx(){
     fi
 }
 
+# 检查容器是否正在运行
+is_container_running() {
+    local container_name=$1 # 传入的第一个参数作为容器名
+    local status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2>/dev/null)
+    if [ "$status" == "running" ]; then
+        return 0  # 容器正在运行
+    else
+        return 1  # 容器未运行
+    fi
+}
+
 # 主循环
 while true; do
     show_menu

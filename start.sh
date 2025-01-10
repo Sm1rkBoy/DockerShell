@@ -174,7 +174,7 @@ is_container_running() {
 # 主循环
 while true; do
     show_menu
-    read -n 1 -p "请输入选择: " choice
+    read -n 1 -p "请输入选择: " choice # 读取用户的第一个字符立即执行不用回车
     echo
     case $choice in
         [1-9])
@@ -191,7 +191,7 @@ while true; do
                     if is_container_running "$container_name"; then
                         echo "容器 $container_name 已经在运行，跳过安装。"
                     else
-                        echo "正在安装 $container_name..."
+                        echo "正在安装的容器是 $container_name..."
                         # 动态调用安装函数
                         install_function="install_$container_name"
                         if declare -f "$install_function" > /dev/null; then # 判断函数是否被定义
@@ -213,14 +213,3 @@ while true; do
             ;;
     esac
 done
-
-# 检查容器是否正在运行
-is_container_running() {
-    local container_name=$1 # 传入的第一个参数作为容器名
-    local status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2>/dev/null)
-    if [ "$status" == "running" ]; then
-        return 0  # 容器正在运行
-    else
-        return 1  # 容器未运行
-    fi
-}

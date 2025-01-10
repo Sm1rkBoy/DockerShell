@@ -160,6 +160,36 @@ install_nginx(){
     fi
 }
 
+install_watchtower(){
+    echo "下载watchtower的compose.yml文件"
+    echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
+    wget -O /opt/docker/compose/watchtower/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/watchtower/compose.yml
+
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/watchtower/compose.yml up -d
+
+    if [ $? -eq 0 ]; then
+        echo "watchtower 安装成功！"
+    else
+        echo "watchtower 安装失败！"
+    fi
+}
+
+install_phpmyadmin(){
+    echo "下载 phpmyadmin 的compose.yml文件"
+    echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
+    wget -O /opt/docker/compose/phpmyadmin/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/phpmyadmin/compose.yml
+
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/phpmyadmin/compose.yml up -d
+
+    if [ $? -eq 0 ]; then
+        echo "phpmyadmin 安装成功！"
+    else
+        echo "phpmyadmin 安装失败！"
+    fi
+}
+
 # 检查容器是否正在运行
 is_container_running() {
     local container_name=$1 # 传入的第一个参数作为容器名

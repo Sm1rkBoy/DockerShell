@@ -11,17 +11,17 @@ fi
 
 # 创建必要的文件夹
 echo "正在创建/opt/docker文件夹"
-mkdir -p /opt/docker/apps
-mkdir -p /opt/docker/config
-mkdir -p /opt/docker/log
-mkdir -p /opt/docker/compose
+mkdir -p /opt/docker/apps    # 存放数据文件以及运行文件
+mkdir -p /opt/docker/config  # 存放配置文件
+mkdir -p /opt/docker/log     # 存放日志文件
+mkdir -p /opt/docker/compose # 存放compose文件和.env文件
 
 # 定义容器列表和选择状态数组
 containers=("mysql" "nginx" "watchtower" "phpmyadmin")
-selected=()
+selected=() # 容器对应的状态(1 1 0 0)表示前两个容器已选中，后两个未选中
 
 # 初始化 selected 数组，检查容器是否已安装
-for i in "${!containers[@]}"; do
+for i in "${!containers[@]}"; do # !containers[@]表示数组的索引
     if docker ps -a --format '{{.Names}}' | grep -q "^${containers[$i]}$"; then
         selected[$i]=1  # 容器已安装，标记为选中
     else
@@ -64,23 +64,6 @@ handle_input() {
             sleep 1
             ;;
     esac
-}
-
-# 执行安装函数
-execute_installation() {
-    for i in "${!containers[@]}"; do
-        if [ "${selected[$i]}" -eq 1 ]; then
-            case "${containers[$i]}" in
-                mysql)
-                    install_mysql
-                    ;;
-                nginx)
-                    install_nginx
-                    ;;
-            esac
-        fi
-    done
-    exit 0
 }
 
 # 定义每个容器的安装函数
@@ -180,5 +163,53 @@ install_nginx(){
 # 主循环
 while true; do
     show_menu
-    handle_input
+    read -n 1 -p "请输入选择: " choice
+    echo
+    case $choice in
+        [1-9])
+            index=$((choice-1)) # $((...))表示算术运算
+            if [ "$index" -lt "${#containers[@]}" ]; then # 索引小于容器数量 #containers[@]表示数组的个数
+                selected[$index]=$((1 - selected[$index]))  # 切换选择状态
+            fi
+            ;;
+        e)
+            echo "开始安装选中的容器..."
+            for i in "${!containers[@]}"; do
+                if [ "${selected[$i]}" -eq 1 ]; then
+                    container_name="${containers[$i]}"
+                    if is_container_running "$container_name"; then
+                        echo "容器 $container_name 已经在运行，跳过安装。"
+                    else
+                        echo "正在安装 $container_name..."
+                        # 动态调用安装函数
+                        install_function="install_$container_name"
+                        if declare -f "$install_function" > /dev/null; then # 判断函数是否被定义
+                            $install_function
+                        else
+                            echo "未知容器: $container_name，跳过安装。"
+                        fi
+                    fi
+                fi
+            done
+            break
+            ;;
+        q)
+            echo "退出脚本。"
+            exit 0
+            ;;
+        *)
+            echo "无效选择，请重新输入。"
+            ;;
+    esac
 done
+
+# 检查容器是否正在运行
+is_container_running() {
+    local container_name=$1 # 传入的第一个参数作为容器名
+    local status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2>/dev/null)
+    if [ "$status" == "running" ]; then
+        return 0  # 容器正在运行
+    else
+        return 1  # 容器未运行
+    fi
+}

@@ -111,7 +111,7 @@ install_mysql() {
     echo "密码已经写入/opt/docker/compose/mysql/.env"
 
     # -O 参数指定下载文件的保存路径
-    wget -O /opt/docker/compose/mysql/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/mysql/compose.yml
+    wget -O /opt/docker/compose/mysql/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/mysql/compose.yml
 
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/mysql/compose.yml up -d

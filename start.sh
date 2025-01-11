@@ -126,7 +126,7 @@ install_redis() {
     mkdir -p /opt/docker/apps/redis
     mkdir -p /opt/docker/compose/redis
     echo "下载 redis 的compose.yml文件"
-    wget -O /opt/docker/compose/redis/compose.yml https://raw.githubusercontent/Sm1rkBoy/DockerShell/compose/compose/redis/compose.yml
+    wget -O /opt/docker/compose/redis/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/redis/compose.yml
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/redis/compose.yml up -d
     if [ $? -eq 0 ]; then
@@ -329,7 +329,7 @@ install_dockge() {
     mkdir -p /opt/docker/apps/dockge
     mkdir -p /opt/docker/compose/dockge
     echo "下载 dockge 的compose.yml文件"
-    wget -O /opt/docker/compose/dockge/compose.yml https://raw.githubusercontent/Sm1rkBoy/DockerShell/compose/compose/dockge/compose.yml
+    wget -O /opt/docker/compose/dockge/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/dockge/compose.yml
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/dockge/compose.yml up -d
     if [ $? -eq 0 ]; then

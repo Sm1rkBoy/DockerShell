@@ -17,7 +17,7 @@ mkdir -p /opt/docker/log     # 存放日志文件
 mkdir -p /opt/docker/compose # 存放compose文件和.env文件
 
 # 定义容器列表和选择状态数组
-containers=("mysql" "nginx" "watchtower" "phpmyadmin" "vaultwarden")
+containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "dockge")
 selected=() # 容器对应的状态(1 1 0 0)表示前两个容器已选中,后两个未选中
 
 # 初始化 selected 数组,检查容器是否已安装
@@ -66,7 +66,6 @@ handle_input() {
     esac
 }
 
-# 定义每个容器的安装函数
 install_mysql() {
     mkdir -p /opt/docker/apps/mysql
     mkdir -p /opt/docker/config/mysql
@@ -120,6 +119,20 @@ install_mysql() {
         echo "MySQL 安装成功！"
     else
         echo "MySQL 安装失败！"
+    fi
+}
+
+install_redis() {
+    mkdir -p /opt/docker/apps/redis
+    mkdir -p /opt/docker/compose/redis
+    echo "下载 redis 的compose.yml文件"
+    wget -O /opt/docker/compose/redis/compose.yml https://raw.githubusercontent/Sm1rkBoy/DockerShell/compose/compose/redis/compose.yml
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/redis/compose.yml up -d
+    if [ $? -eq 0 ]; then
+        echo "redis 安装成功！"
+    else
+        echo "redis 安装失败！"
     fi
 }
 
@@ -310,6 +323,20 @@ install_vaultwarden() {
     echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
     echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
     echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
+}
+
+install_dockge() {
+    mkdir -p /opt/docker/apps/dockge
+    mkdir -p /opt/docker/compose/dockge
+    echo "下载 dockge 的compose.yml文件"
+    wget -O /opt/docker/compose/dockge/compose.yml https://raw.githubusercontent/Sm1rkBoy/DockerShell/compose/compose/dockge/compose.yml
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/dockge/compose.yml up -d
+    if [ $? -eq 0 ]; then
+        echo "dockge 安装成功！"
+    else
+        echo "dockge 安装失败！"
+    fi
 }
 
 # 检查容器是否正在运行

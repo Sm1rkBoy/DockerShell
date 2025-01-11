@@ -307,6 +307,9 @@ install_vaultwarden() {
     else
         echo "vaultwarden 安装失败！"
     fi
+    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
+    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
+    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
 }
 
 # 检查容器是否正在运行

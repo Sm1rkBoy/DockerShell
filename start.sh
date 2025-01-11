@@ -244,7 +244,7 @@ install_vaultwarden() {
     echo "DOMAIN=$DOMAIN" >> "$CONFIG_FILE"
     echo >> "$CONFIG_FILE"  # 空行
 
-    echo "# 时区设置"
+    echo "# 时区设置" >> "$CONFIG_FILE"
     read -p "请输入时区(默认:Asia/Shanghai): " TZ
     TZ=${TZ:-Asia/Shanghai} # 如果用户未输入时区,则默认为 Asia/Shanghai
     echo "TZ=$TZ" >> "$CONFIG_FILE" 

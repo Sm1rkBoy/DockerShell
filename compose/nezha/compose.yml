@@ -1,0 +1,16 @@
+services:
+    nezha:
+        image: ghcr.io/nezhahq/nezha:latest
+        container_name: nezha
+        restart: on-failure:3
+        networks:
+            universal: null
+        volumes:
+            - /opt/docker/apps/nezha:/dashboard/data
+        ports:
+            - 8008:8008
+        labels:
+            com.centurylinklabs.watchtower.enable: false
+networks:
+    universal:
+        external: true

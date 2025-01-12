@@ -110,7 +110,7 @@ install_mysql() {
     echo "密码已经写入/opt/docker/compose/mysql/mysql.env"
 
     # -O 参数指定下载文件的保存路径
-    wget -O /opt/docker/compose/mysql/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/mysql/compose.yml
+    wget -O /opt/docker/compose/mysql/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/mysql/compose.yml
 
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/mysql/compose.yml up -d
@@ -126,7 +126,7 @@ install_redis() {
     mkdir -p /opt/docker/apps/redis
     mkdir -p /opt/docker/compose/redis
     echo "下载 redis 的compose.yml文件"
-    wget -O /opt/docker/compose/redis/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/redis/compose.yml
+    wget -O /opt/docker/compose/redis/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/redis/compose.yml
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/redis/compose.yml up -d
     if [ $? -eq 0 ]; then
@@ -161,7 +161,7 @@ install_nginx(){
     docker rm -f nginx
 
     echo "下载nginx的compose.yml文件"
-    wget -O /opt/docker/compose/nginx/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/nginx/compose.yml
+    wget -O /opt/docker/compose/nginx/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/nginx/compose.yml
 
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/nginx/compose.yml up -d
@@ -177,7 +177,7 @@ install_watchtower(){
     mkdir -p /opt/docker/compose/watchtower
     echo "下载watchtower的compose.yml文件"
     echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
-    wget -O /opt/docker/compose/watchtower/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/watchtower/compose.yml
+    wget -O /opt/docker/compose/watchtower/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/watchtower/compose.yml
 
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/watchtower/compose.yml up -d
@@ -193,7 +193,7 @@ install_phpmyadmin(){
     mkdir -p /opt/docker/compose/phpmyadmin
     echo "下载 phpmyadmin 的compose.yml文件"
     echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
-    wget -O /opt/docker/compose/phpmyadmin/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/phpmyadmin/compose.yml
+    wget -O /opt/docker/compose/phpmyadmin/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/phpmyadmin/compose.yml
 
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/phpmyadmin/compose.yml up -d
@@ -310,7 +310,7 @@ install_vaultwarden() {
     fi
 
     # -O 参数指定下载文件的保存路径
-    wget -O /opt/docker/compose/vaultwarden/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/vaultwarden/compose.yml
+    wget -O /opt/docker/compose/vaultwarden/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/vaultwarden/compose.yml
 
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/vaultwarden/compose.yml up -d
@@ -329,7 +329,7 @@ install_dockge() {
     mkdir -p /opt/docker/apps/dockge
     mkdir -p /opt/docker/compose/dockge
     echo "下载 dockge 的compose.yml文件"
-    wget -O /opt/docker/compose/dockge/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/compose/dockge/compose.yml
+    wget -O /opt/docker/compose/dockge/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/dockge/compose.yml
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/dockge/compose.yml up -d
     if [ $? -eq 0 ]; then

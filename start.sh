@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # 检查universal网络是否存在
+echo "正在检查Docker网络设置"
 if docker network inspect universal >/dev/null 2>&1; then
     echo "universal网络已存在"
 else
@@ -9,28 +10,36 @@ else
 fi
 
 # 创建必要的文件夹
-mkdir -p /opt/docker/apps
-mkdir -p /opt/docker/config
-mkdir -p /opt/docker/logs
-mkdir -p /opt/docker/compose
+echo "正在创建/opt/docker文件夹"
+mkdir -p /opt/docker/apps    # 存放数据文件以及运行文件
+mkdir -p /opt/docker/config  # 存放配置文件
+mkdir -p /opt/docker/log     # 存放日志文件
+mkdir -p /opt/docker/compose # 存放compose文件和.env文件
 
 # 定义容器列表和选择状态数组
-containers=("mysql" "nginx")
-selected=(0 0)
+containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "dockge")
+selected=() # 容器对应的状态(1 1 0 0)表示前两个容器已选中,后两个未选中
+
+# 初始化 selected 数组,检查容器是否已安装
+for i in "${!containers[@]}"; do # !containers[@]表示数组的索引
+    if docker ps -a --format '{{.Names}}' | grep -q "^${containers[$i]}$"; then
+        selected[$i]=1  # 容器已安装,标记为选中
+    else
+        selected[$i]=0  # 容器未安装,标记为未选中
+    fi
+done
 
 # 显示菜单函数
 show_menu() {
     clear
-    echo "请选择要安装的容器 (使用数字切换选择，按e开始安装，按q退出):"
+    echo "请选择要安装的容器 (输入容器对应的数字勾选,按e开始安装,按q退出):"
     for i in "${!containers[@]}"; do
         if [ "${selected[$i]}" -eq 1 ]; then
-            echo "[*] $((i+1)). ${containers[$i]}"
+            echo "[*] $((i+1)).${containers[$i]}"
         else
-            echo "[ ] $((i+1)). ${containers[$i]}"
+            echo "[ ] $((i+1)).${containers[$i]}"
         fi
     done
-    echo "q) 退出"
-    echo "e) 执行安装"
 }
 
 # 处理用户输入
@@ -57,24 +66,6 @@ handle_input() {
     esac
 }
 
-# 执行安装函数
-execute_installation() {
-    for i in "${!containers[@]}"; do
-        if [ "${selected[$i]}" -eq 1 ]; then
-            case "${containers[$i]}" in
-                mysql)
-                    install_mysql
-                    ;;
-                nginx)
-                    install_nginx
-                    ;;
-            esac
-        fi
-    done
-    exit 0
-}
-
-# 定义每个容器的安装函数
 install_mysql() {
     mkdir -p /opt/docker/apps/mysql
     mkdir -p /opt/docker/config/mysql
@@ -105,18 +96,18 @@ install_mysql() {
     read -s -p "请输入MySQL密码(root): " rootPassword
     echo
 
-    # 如果用户没有输入密码，则生成一个随机密码
+    # 如果用户没有输入密码,则生成一个随机密码
     if [ -z "$rootPassword" ]; then
     rootPassword=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
-    echo "未输入密码，已生成随机密码: $rootPassword"
+    echo "未输入密码,已生成随机密码: $rootPassword"
     fi
 
     # 将密码写入 .env 文件
-    touch /opt/docker/compose/mysql/.env
-    echo "MYSQL_ROOT_PASSWORD=$rootPassword" > /opt/docker/compose/mysql/.env
+    touch /opt/docker/compose/mysql/mysql.env
+    echo "MYSQL_ROOT_PASSWORD=$rootPassword" > /opt/docker/compose/mysql/mysql.env
 
     # 提示用户 .env 文件已创建
-    echo "密码已经写入/opt/docker/compose/mysql/.env"
+    echo "密码已经写入/opt/docker/compose/mysql/mysql.env"
 
     # -O 参数指定下载文件的保存路径
     wget -O /opt/docker/compose/mysql/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/mysql/compose.yml
@@ -131,8 +122,273 @@ install_mysql() {
     fi
 }
 
+install_redis() {
+    mkdir -p /opt/docker/apps/redis
+    mkdir -p /opt/docker/compose/redis
+    echo "下载 redis 的compose.yml文件"
+    wget -O /opt/docker/compose/redis/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/redis/compose.yml
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/redis/compose.yml up -d
+    if [ $? -eq 0 ]; then
+        echo "redis 安装成功！"
+    else
+        echo "redis 安装失败！"
+    fi
+}
+
+install_nginx(){
+    mkdir -p /opt/docker/config/nginx
+    mkdir -p /opt/docker/log/nginx
+    mkdir -p /opt/docker/compose/nginx
+    # 启动 Nginx 容器
+    echo "启动 Nginx 容器..."
+    docker run -d --name nginx \
+        --health-cmd="curl -f http://localhost || exit 1" \
+        --health-interval=5s \
+        --health-timeout=3s \
+        --health-retries=3 \
+        nginx:latest
+
+    # 当容器完全启动再执行docker cp命令
+    while [[ $(docker inspect -f '{{.State.Health.Status}}' nginx) != "healthy" ]]; do
+        sleep 1
+    done
+
+    echo "拷贝/etc/nginx文件到到本地文件/opt/docker/config/nginx"
+    docker cp nginx:/etc/nginx /opt/docker/config/
+
+    echo "删除临时nginx容器"
+    docker rm -f nginx
+
+    echo "下载nginx的compose.yml文件"
+    wget -O /opt/docker/compose/nginx/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/nginx/compose.yml
+
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/nginx/compose.yml up -d
+
+    if [ $? -eq 0 ]; then
+        echo "Nginx 安装成功！"
+    else
+        echo "Nginx 安装失败！"
+    fi
+}
+
+install_watchtower(){
+    mkdir -p /opt/docker/compose/watchtower
+    echo "下载watchtower的compose.yml文件"
+    echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
+    wget -O /opt/docker/compose/watchtower/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/watchtower/compose.yml
+
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/watchtower/compose.yml up -d
+
+    if [ $? -eq 0 ]; then
+        echo "watchtower 安装成功！"
+    else
+        echo "watchtower 安装失败！"
+    fi
+}
+
+install_phpmyadmin(){
+    mkdir -p /opt/docker/compose/phpmyadmin
+    echo "下载 phpmyadmin 的compose.yml文件"
+    echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
+    wget -O /opt/docker/compose/phpmyadmin/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/phpmyadmin/compose.yml
+
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/phpmyadmin/compose.yml up -d
+
+    if [ $? -eq 0 ]; then
+        echo "phpmyadmin 安装成功！"
+    else
+        echo "phpmyadmin 安装失败！"
+    fi
+}
+
+install_vaultwarden() {
+    mkdir -p /opt/docker/apps/vaultwarden
+    mkdir -p /opt/docker/compose/vaultwarden
+    mkdir -p /opt/docker/log/vaultwarden
+
+    # 初始化配置文件
+    CONFIG_FILE="/opt/docker/compose/vaultwarden/vaultwarden.env" > "$CONFIG_FILE"  # 清空文件内容
+
+    echo "# log文件设置" >> "$CONFIG_FILE"
+    echo "LOG_FILE=/log/vaultwarden.log" >> "$CONFIG_FILE"
+    echo "LOG_LEVEL=warn" >> "$CONFIG_FILE"
+    echo "EXTENDED_LOGGING=true" >> "$CONFIG_FILE"
+    echo >> "$CONFIG_FILE"  # 空行
+
+    echo "# 取消密码提示" >> "$CONFIG_FILE"
+    echo "SHOW_PASSWORD_HINT=false" >> "$CONFIG_FILE"
+    echo >> "$CONFIG_FILE"  # 空行
+
+    echo "初次创建最好开启注册再关闭注册!!!!"
+    read -p "是否开启注册(关闭注册默认打开邀请)?(Y/n): " SIGNUPS_ALLOWED
+    SIGNUPS_ALLOWED=${SIGNUPS_ALLOWED:-y}
+    if [[ "$SIGNUPS_ALLOWED" =~ ^[Yy]$ ]]; then
+        echo "# 注册&邀请设置" >> "$CONFIG_FILE"
+        echo "SIGNUPS_ALLOWED=true" >> "$CONFIG_FILE"
+        echo "INVITATIONS_ALLOWED=false" >> "$CONFIG_FILE"
+        echo >> "$CONFIG_FILE"  # 空行
+    fi
+
+    echo "# Admin面板设置" >> "$CONFIG_FILE"
+    TOKEN=$(openssl rand -base64 48) # 生成一个随机的48位字符串
+    echo "DISABLE_ADMIN_TOKEN=false" >> "$CONFIG_FILE"
+    echo "ADMIN_TOKEN=${TOKEN}" >> "$CONFIG_FILE" 
+    echo >> "$CONFIG_FILE"  # 空行
+    
+    echo "# 域名设置" >> "$CONFIG_FILE"
+    read -p "请输入域名: " DOMAIN
+    echo "DOMAIN=$DOMAIN" >> "$CONFIG_FILE"
+    echo >> "$CONFIG_FILE"  # 空行
+
+    echo "# 时区设置" >> "$CONFIG_FILE"
+    read -p "请输入时区(默认:Asia/Shanghai): " TZ
+    TZ=${TZ:-Asia/Shanghai} # 如果用户未输入时区,则默认为 Asia/Shanghai
+    echo "TZ=$TZ" >> "$CONFIG_FILE" 
+    echo >> "$CONFIG_FILE"  # 空行
+
+    # 询问是否开启WebSocket
+    read -p "是否开启WebSocket?(Y/n): " WEBSOCKET_ENABLED
+    WEBSOCKET_ENABLED=${WEBSOCKET_ENABLED:-y}
+    if [[ "$WEBSOCKET_ENABLED" =~ ^[Yy]$ ]]; then
+        echo "# WebSocket设置" >> "$CONFIG_FILE"
+        echo "WEBSOCKET_ENABLED=true" >> "$CONFIG_FILE"
+        echo >> "$CONFIG_FILE"  # 空行
+    fi
+
+    # 询问是否使用 MySQL数据库
+    read -p "是否使用 MySQL?(y/N): " USE_MYSQL
+    USE_MYSQL=${USE_MYSQL:-n}
+    if [[ "$USE_MYSQL" =~ ^[Yy]$ ]]; then
+        # 如果用户选择使用 MySQL，则设置 MySQL 相关配置
+        read -p "请输入 MySQL 用户名: " MYSQL_USER
+        read -p "请输入 MySQL 密码: " MYSQL_PASSWORD
+        read -p "请输入 MySQL 主机: " MYSQL_HOST
+        read -p "请输入 MySQL 端口: " MYSQL_PORT
+        read -p "请输入 MySQL 数据库名: " MYSQL_DATABASE
+        echo "# 数据库设置" >> "$CONFIG_FILE"
+        echo "DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}" >> "$CONFIG_FILE"
+        echo >> "$CONFIG_FILE"  # 空行
+    fi
+
+    # 询问是否开启SMTP
+    read -p "是否开启SMTP?(y/N): " USE_SMTP
+    USE_SMTP=${USE_SMTP:-n}
+    if [[ "$USE_SMTP" =~ ^[Yy]$ ]]; then
+        read -p "请输入SMTP主机: " SMTP_HOST
+        read -p "请输入SMTP端口: " SMTP_PORT
+        read -p "请输入SMTP安全性: " SMTP_SECURITY
+        read -p "请输入SMTP用户名: " SMTP_USERNAME
+        read -p "请输入SMTP密码: " SMTP_PASSWORD
+        read -p "请输入SMTP发件人: " SMTP_FROM
+        read -p "请输入SMTP认证机制: " SMTP_AUTH_MECHANISM
+        echo "# SMTP设置" >> "$CONFIG_FILE"
+        echo "SMTP_HOST=$SMTP_HOST" >> "$CONFIG_FILE"
+        echo "SMTP_PORT=$SMTP_PORT" >> "$CONFIG_FILE"
+        echo "SMTP_SECURITY=$SMTP_SECURITY" >> "$CONFIG_FILE"
+        echo "SMTP_USERNAME=$SMTP_USERNAME" >> "$CONFIG_FILE"
+        echo "SMTP_PASSWORD=$SMTP_PASSWORD" >> "$CONFIG_FILE"
+        echo "SMTP_FROM=$SMTP_FROM" >> "$CONFIG_FILE"
+        echo "SMTP_AUTH_MECHANISM=$SMTP_AUTH_MECHANISM" >> "$CONFIG_FILE"
+        echo >> "$CONFIG_FILE"  # 空行
+    fi
+
+    # 询问是否开启PUSH
+    read -p "是否开启推送?(y/N): " USE_PUSH
+    USE_PUSH=${USE_PUSH:-n}
+    if [[ "$USE_PUSH" =~ ^[Yy]$ ]]; then
+        read -p "请输入推送ID: " PUSH_ID
+        read -p "请输入推送KEY: " PUSH_KEY
+        echo "# 推送设置" >> "$CONFIG_FILE"
+        echo "PUSH_ENABLED=true" >> "$CONFIG_FILE"
+        echo "PUSH_INSTALLATION_ID=$PUSH_ID" >> "$CONFIG_FILE"
+        echo "PUSH_INSTALLATION_KEY=$PUSH_KEY" >> "$CONFIG_FILE"
+        echo >> "$CONFIG_FILE"  # 空行
+    fi
+
+    # -O 参数指定下载文件的保存路径
+    wget -O /opt/docker/compose/vaultwarden/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/vaultwarden/compose.yml
+
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/vaultwarden/compose.yml up -d
+
+    if [ $? -eq 0 ]; then
+        echo "vaultwarden 安装成功！"
+    else
+        echo "vaultwarden 安装失败！"
+    fi
+    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
+    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
+    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
+}
+
+install_dockge() {
+    mkdir -p /opt/docker/apps/dockge
+    mkdir -p /opt/docker/compose/dockge
+    echo "下载 dockge 的compose.yml文件"
+    wget -O /opt/docker/compose/dockge/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/dockge/compose.yml
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/dockge/compose.yml up -d
+    if [ $? -eq 0 ]; then
+        echo "dockge 安装成功！"
+    else
+        echo "dockge 安装失败！"
+    fi
+}
+
+# 检查容器是否正在运行
+is_container_running() {
+    local container_name=$1 # 传入的第一个参数作为容器名
+    local status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2>/dev/null)
+    if [ "$status" == "running" ]; then
+        return 0  # 容器正在运行
+    else
+        return 1  # 容器未运行
+    fi
+}
+
 # 主循环
 while true; do
     show_menu
-    handle_input
+    read -n 1 -p "请输入选择: " choice # 读取用户的第一个字符立即执行不用回车
+    echo
+    case $choice in
+        [1-9])
+            index=$((choice-1)) # $((...))表示算术运算
+            if [ "$index" -lt "${#containers[@]}" ]; then # 索引小于容器数量 #containers[@]表示数组的个数
+                selected[$index]=$((1 - selected[$index]))  # 切换选择状态
+            fi
+            ;;
+        e)
+            echo "开始安装选中的容器..."
+            for i in "${!containers[@]}"; do
+                if [ "${selected[$i]}" -eq 1 ]; then
+                    container_name="${containers[$i]}"
+                    if is_container_running "$container_name"; then
+                        echo "容器 $container_name 已经在运行,跳过安装。"
+                    else
+                        echo "正在安装的容器是 $container_name..."
+                        # 动态调用安装函数
+                        install_function="install_$container_name"
+                        if declare -f "$install_function" > /dev/null; then # 判断函数是否被定义
+                            $install_function
+                        else
+                            echo "未知容器: $container_name,跳过安装。"
+                        fi
+                    fi
+                fi
+            done
+            break
+            ;;
+        q)
+            echo "退出脚本。"
+            exit 0
+            ;;
+        *)
+            echo "无效选择,请重新输入。"
+            ;;
+    esac
 done

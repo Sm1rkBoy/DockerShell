@@ -1,0 +1,18 @@
+services:
+    nginx:
+        image: nginx:latest
+        container_name: nginx
+        restart: on-failure:3
+        networks:
+            universal: null
+        volumes:
+            - /opt/docker/config/nginx:/etc/nginx
+            - /opt/docker/log/nginx:/var/log/nginx 
+        ports:
+            - 80:80
+            - 443:443
+        labels:
+            com.centurylinklabs.watchtower.enable: true
+networks:
+    universal:
+        external: true

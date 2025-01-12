@@ -1,0 +1,16 @@
+services:
+    vaultwarden:
+        image: vaultwarden/server:latest
+        container_name: vaultwarden
+        restart: on-failure:3
+        networks:
+            universal: null
+        volumes:
+            - /opt/docker/apps/vaultwarden:/data
+            - /opt/docker/log/vaultwarden:/log
+        env_file:
+            - vaultwarden.env
+
+networks:
+    universal:
+        external: true

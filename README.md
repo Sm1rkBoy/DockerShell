@@ -4,5 +4,5 @@ DockerShell is a startup script based on `compose.yml`, designed to launch conta
 
 ## How to Use?
 ```bash
-bash <(curl -sSL https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/start.sh)
+bash <(curl -sSL https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/compose/start.sh)
 ```

@@ -14,8 +14,8 @@ services:
             - /opt/docker/config/mysql/my.cnf:/etc/my.cnf
         # ports:
         #   - 3306:3306
-        environment:
-            - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        env_file:
+            - mysql.env
         labels:
             com.centurylinklabs.watchtower.enable: true
 networks:

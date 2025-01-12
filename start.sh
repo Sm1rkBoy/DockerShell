@@ -17,7 +17,7 @@ mkdir -p /opt/docker/log     # 存放日志文件
 mkdir -p /opt/docker/compose # 存放compose文件和.env文件
 
 # 定义容器列表和选择状态数组
-containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "dockge")
+containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "dockge" "nezha(v1)")
 selected=() # 容器对应的状态(1 1 0 0)表示前两个容器已选中,后两个未选中
 
 # 初始化 selected 数组,检查容器是否已安装
@@ -336,6 +336,34 @@ install_dockge() {
         echo "dockge 安装成功！"
     else
         echo "dockge 安装失败！"
+    fi
+}
+
+install_nezha() {
+    mkdir -p /opt/docker/apps/nezha
+    mkdir -p /opt/docker/compose/nezha
+
+    echo "下载 nezha 的compose.yml文件"
+    wget -O /opt/docker/compose/nezha/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/nezha/compose.yml
+
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/nezha/compose.yml up -d
+
+    # 定义要修改的文件路径
+    CONFIG_FILE="/opt/docker/apps/nezha/config.yml"
+    sed -i 's/language: .*/language: zh_CN/' "$CONFIG_FILE"
+    read -p "请输入网站徽标: " SITENAME
+    sed -i "s/sitename: .*/sitename: $SITENAME/" "$CONFIG_FILE"
+    read -p "请输入Agent对接地址(IP:PORT): " INSTALLHOST
+    sed -i "s/installhost: .*/installhost: $INSTALLHOST/" "$CONFIG_FILE"
+
+    # 重新启动 Docker Compose 重建nezha
+    docker compose -f /opt/docker/compose/nezha/compose.yml up -d
+    
+    if [ $? -eq 0 ]; then
+        echo "nezha 安装成功！"
+    else
+        echo "nezha 安装失败！"
     fi
 }
 

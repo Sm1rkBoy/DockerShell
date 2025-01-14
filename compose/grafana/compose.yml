@@ -1,0 +1,26 @@
+services:
+    grafana:
+        image: grafana/grafana:latest
+        container_name: grafana
+        restart: on-failure:3
+        networks:
+            universal: null
+        volumes:
+            - /opt/docker/config/grafana:/etc/grafana
+            - /opt/docker/apps/grafana:/var/lib/grafana
+            - /opt/docker/log/grafana:/var/log/grafana
+        # ports:
+        #   - 3000:3000
+        env_file:
+            - grafana.env
+        healthcheck:
+            test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/health']
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 10s
+        labels:
+            com.centurylinklabs.watchtower.enable: true
+networks:
+    universal:
+        external: true

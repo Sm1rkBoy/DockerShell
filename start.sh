@@ -410,7 +410,7 @@ install_grafana() {
     read -p "是否允许用户注册(默认:false): " GF_USERS_ALLOW_SIGN_UP
     GF_USERS_ALLOW_SIGN_UP=${GF_USERS_ALLOW_SIGN_UP:-false}
 
-    echo "GF_SECURITY_ADMIN_USER= $GF_SECURITY_ADMIN_USER" > "$output_file"
+    echo "GF_SECURITY_ADMIN_USER= $GF_SECURITY_ADMIN_USER" >> "$output_file"
     echo "GF_SECURITY_ADMIN_PASSWORD= $GF_SECURITY_ADMIN_PASSWORD" >> "$output_file"
     echo "GF_USERS_ALLOW_SIGN_UP= $GF_USERS_ALLOW_SIGN_UP" >> "$output_file"
 

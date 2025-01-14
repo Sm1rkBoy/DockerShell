@@ -17,7 +17,7 @@ mkdir -p /opt/docker/log     # 存放日志文件
 mkdir -p /opt/docker/compose # 存放compose文件和.env文件
 
 # 定义容器列表和选择状态数组
-containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "dockge" "nezha")
+containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "dockge" "nezha" "grafana" "prometheus")
 selected=() # 容器对应的状态(1 1 0 0)表示前两个容器已选中,后两个未选中
 
 # 初始化 selected 数组,检查容器是否已安装
@@ -367,6 +367,66 @@ install_nezha() {
     fi
 }
 
+install_grafana() {
+    mkdir -p /opt/docker/apps/grafana
+    mkdir -p /opt/docker/config/grafana
+    mkdir -p /opt/docker/compose/grafana
+    mkdir -p /opt/docker/log/grafana
+
+    echo "正在安装 Grafana..."
+    # 启动 Grafana 临时容器
+    docker run -d \
+        --name grafana \
+        -p 3000:3000 \
+        --health-cmd "curl -f http://localhost:3000/api/health || exit 1" \
+        --health-interval 30s \
+        --health-timeout 10s \
+        --health-retries 3 \
+        grafana/grafana:latest
+
+    # 当容器完全启动再执行docker cp命令
+    while [[ $(docker inspect -f '{{.State.Health.Status}}' grafana) != "healthy" ]]; do
+        sleep 1
+    done
+
+    docker cp grafana:/etc/grafana /opt/docker/config
+    docker cp grafana:/var/lib/grafana /opt/docker/apps
+    docker cp grafana:/var/log/grafana /opt/docker/log
+    docker rm -f grafana
+
+    # 定义文件路径
+    touch /opt/docker/compose/grafana/grafana.env
+    output_file="/opt/docker/compose/grafana/grafana.env" > "$output_file"  # 清空文件内容
+    echo "GF_PATHS_CONFIG=/etc/grafana/grafana.ini" >> "$output_file"
+    echo "GF_PATHS_DATA=/var/lib/grafana" >> "$output_file"
+    echo "GF_PATHS_HOME=/usr/share/grafana" >> "$output_file"
+    echo "GF_PATHS_LOGS=/var/log/grafana" >> "$output_file"
+    echo "GF_PATHS_PLUGINS=/var/lib/grafana/plugins" >> "$output_file"
+    echo "GF_PATHS_PROVISIONING=/etc/grafana/provisioning" >> "$output_file"
+    read -p "请输入管理员用户名(默认:root): " GF_SECURITY_ADMIN_USER
+    GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-root}
+    read -p "请输入管理员密码(默认:12345678): " GF_SECURITY_ADMIN_PASSWORD
+    GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-12345678}
+    read -p "是否允许用户注册(默认:false): " GF_USERS_ALLOW_SIGN_UP
+    GF_USERS_ALLOW_SIGN_UP=${GF_USERS_ALLOW_SIGN_UP:-false}
+
+    echo "GF_SECURITY_ADMIN_USER=$GF_SECURITY_ADMIN_USER" > "$output_file"
+    echo "GF_SECURITY_ADMIN_PASSWORD=$GF_SECURITY_ADMIN_PASSWORD" >> "$output_file"
+    echo "GF_USERS_ALLOW_SIGN_UP=$GF_USERS_ALLOW_SIGN_UP" >> "$output_file"
+
+    # -O 参数指定下载文件的保存路径
+    wget -O /opt/docker/compose/grafana/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/grafana/compose.yml
+
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/grafana/compose.yml up -d
+
+    if [ $(docker inspect -f '{{.State.Health.Status}}' grafana) != "healthy" ]; then
+        echo "Grafana 安装成功！"
+    else
+        echo "Grafana 安装失败！"
+    fi
+}
+
 # 检查容器是否正在运行
 is_container_running() {
     local container_name=$1 # 传入的第一个参数作为容器名
@@ -381,10 +441,23 @@ is_container_running() {
 # 主循环
 while true; do
     show_menu
-    read -n 1 -p "请输入选择: " choice # 读取用户的第一个字符立即执行不用回车
+    # 提示用户输入
+    echo -n "请选择需要的容器: "
+
+    # 读取第一个字符
+    read -N 1 choice
+
+    # 尝试读取第二个字符（超时时间为 0.15 秒）
+    if read -N 1 -t 0.15 second_char; then
+        choice="$choice$second_char"
+    fi
+
+    # 删除可能的换行符
+    choice=$(echo "$choice" | tr -d '\n')
+
     echo
     case $choice in
-        [1-9])
+        [1-9]|[1-9][0-9])
             index=$((choice-1)) # $((...))表示算术运算
             if [ "$index" -lt "${#containers[@]}" ]; then # 索引小于容器数量 #containers[@]表示数组的个数
                 selected[$index]=$((1 - selected[$index]))  # 切换选择状态

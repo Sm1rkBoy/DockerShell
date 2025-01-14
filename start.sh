@@ -420,7 +420,7 @@ install_grafana() {
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/grafana/compose.yml up -d
 
-    if [ $(docker inspect -f '{{.State.Health.Status}}' grafana) != "healthy" ]; then
+    if [ $? -eq 0 ]; then
         echo "Grafana 安装成功！"
     else
         echo "Grafana 安装失败！"

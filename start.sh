@@ -410,9 +410,9 @@ install_grafana() {
     read -p "是否允许用户注册(默认:false): " GF_USERS_ALLOW_SIGN_UP
     GF_USERS_ALLOW_SIGN_UP=${GF_USERS_ALLOW_SIGN_UP:-false}
 
-    echo "GF_SECURITY_ADMIN_USER=$GF_SECURITY_ADMIN_USER" > "$output_file"
-    echo "GF_SECURITY_ADMIN_PASSWORD=$GF_SECURITY_ADMIN_PASSWORD" >> "$output_file"
-    echo "GF_USERS_ALLOW_SIGN_UP=$GF_USERS_ALLOW_SIGN_UP" >> "$output_file"
+    echo "GF_SECURITY_ADMIN_USER= $GF_SECURITY_ADMIN_USER" > "$output_file"
+    echo "GF_SECURITY_ADMIN_PASSWORD= $GF_SECURITY_ADMIN_PASSWORD" >> "$output_file"
+    echo "GF_USERS_ALLOW_SIGN_UP= $GF_USERS_ALLOW_SIGN_UP" >> "$output_file"
 
     # -O 参数指定下载文件的保存路径
     wget -O /opt/docker/compose/grafana/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/grafana/compose.yml

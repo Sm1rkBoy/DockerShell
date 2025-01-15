@@ -86,8 +86,8 @@ handle_input() {
     # 读取第一个字符
     read -N 1 choice
 
-    # 尝试读取第二个字符（超时时间为 0.15 秒）
-    if read -N 1 -t 0.15 second_char; then
+    # 尝试读取第二个字符（超时时间为 0.2 秒）
+    if read -N 1 -t 0.2 second_char; then
         choice="$choice$second_char"
     fi
 

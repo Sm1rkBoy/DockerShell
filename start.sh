@@ -37,7 +37,7 @@ echo "正在创建/opt/docker文件夹"
 mkdir -p /opt/docker/{apps,config,log,compose}
 
 # 定义容器列表和选择状态数组
-containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "dockge" "nezha" "grafana" "prometheus")
+containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "dockge" "nezha" "grafana" "prometheus" "victoriametrics")
 selected=() # 容器对应的状态(1 1 0 0)表示前两个容器已选中,后两个未选中
 
 # 检查容器是否安装
@@ -137,26 +137,6 @@ install_mysql() {
     # 创建目录
     mkdir -p /opt/docker/{apps,config,compose,log}/mysql
 
-    echo "正在安装 MySQL..."
-    # 启动 MySQL 临时容器
-    docker run -d \
-        --name mysql \
-        -e MYSQL_ROOT_PASSWORD=123456 \
-        -p 3306:3306 \
-        --health-cmd "mysqladmin ping -h localhost" \
-        --health-interval 5s \
-        --health-timeout 10s \
-        --health-retries 5 \
-        mysql:8.4.0
-    
-    # 当容器完全启动再执行docker cp命令
-    while [[ $(docker inspect -f '{{.State.Health.Status}}' mysql) != "healthy" ]]; do
-        sleep 1
-    done
-
-    docker cp mysql:/var/lib/mysql /opt/docker/apps && docker cp mysql:/etc/my.cnf /opt/docker/config/mysql
-    docker rm -f mysql
-
     # 提示用户输入 MySQL root 密码
     read -s -p "请输入MySQL密码(root): " rootPassword
     echo
@@ -173,6 +153,27 @@ install_mysql() {
 
     # 提示用户 .env 文件已创建
     echo "密码已经写入/opt/docker/compose/mysql/mysql.env"
+
+    echo "正在启动临时 MySQL 容器..."
+    # 启动 MySQL 临时容器
+    docker run -d \
+        --name mysql \
+        -e MYSQL_ROOT_PASSWORD=$rootPassword \
+        -p 3306:3306 \
+        --health-cmd "mysqladmin ping -h localhost" \
+        --health-interval 5s \
+        --health-timeout 10s \
+        --health-retries 5 \
+        mysql:8.4.3
+    
+    # 当容器完全启动再执行docker cp命令
+    while [[ $(docker inspect -f '{{.State.Health.Status}}' mysql) != "healthy" ]]; do
+        sleep 1
+    done
+
+    docker cp mysql:/etc/my.cnf /opt/docker/config/mysql
+    docker rm -f mysql
+
 
     # -O 参数指定下载文件的保存路径
     wget -O /opt/docker/compose/mysql/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/mysql/compose.yml
@@ -438,15 +439,43 @@ install_grafana() {
     # 创建目录
     mkdir -p /opt/docker/{apps,config,compose,log}/grafana
 
-    echo "正在安装 Grafana..."
+    # 定义文件路径
+    touch /opt/docker/compose/grafana/grafana.env
+    output_file="/opt/docker/compose/grafana/grafana.env" > "$output_file"  # 清空文件内容
+    echo "GF_PATHS_CONFIG=/etc/grafana/grafana.ini" >> "$output_file"
+    echo "GF_PATHS_DATA=/var/lib/grafana" >> "$output_file"
+    echo "GF_PATHS_HOME=/usr/share/grafana" >> "$output_file"
+    echo "GF_PATHS_LOGS=/var/log/grafana" >> "$output_file"
+    echo "GF_PATHS_PLUGINS=/var/lib/grafana/plugins" >> "$output_file"
+    echo "GF_PATHS_PROVISIONING=/etc/grafana/provisioning" >> "$output_file"
+    read -p "请输入管理员用户名(默认:grafana): " GF_SECURITY_ADMIN_USER
+    GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-grafana}
+    read -p "请输入管理员密码(默认:12345678): " GF_SECURITY_ADMIN_PASSWORD
+    GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-12345678}
+    read -p "是否允许用户注册(默认:false): " GF_USERS_ALLOW_SIGN_UP
+    GF_USERS_ALLOW_SIGN_UP=${GF_USERS_ALLOW_SIGN_UP:-false}
+    echo "GF_SECURITY_ADMIN_USER=$GF_SECURITY_ADMIN_USER" >> "$output_file"
+    echo "GF_SECURITY_ADMIN_PASSWORD=$GF_SECURITY_ADMIN_PASSWORD" >> "$output_file"
+    echo "GF_USERS_ALLOW_SIGN_UP=$GF_USERS_ALLOW_SIGN_UP" >> "$output_file"
+
+    echo "正在启动临时 Grafana 容器..."
     # 启动 Grafana 临时容器
     docker run -d \
         --name grafana \
         -p 3000:3000 \
         --health-cmd "curl -f http://localhost:3000/api/health || exit 1" \
-        --health-interval 30s \
+        --health-interval 10s \
         --health-timeout 10s \
-        --health-retries 3 \
+        --health-retries 10 \
+        -e GF_PATHS_CONFIG=/etc/grafana/grafana.ini \
+        -e GF_PATHS_DATA=/var/lib/grafana \
+        -e GF_PATHS_HOME=/usr/share/grafana \
+        -e GF_PATHS_LOGS=/var/log/grafana \
+        -e GF_PATHS_PLUGINS=/var/lib/grafana/plugins \
+        -e GF_PATHS_PROVISIONING=/etc/grafana/provisioning \
+        -e GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-grafana} \
+        -e GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-12345678} \
+        -e GF_USERS_ALLOW_SIGN_UP=${GF_USERS_ALLOW_SIGN_UP:-false} \
         grafana/grafana:latest
 
     # 当容器完全启动再执行docker cp命令
@@ -458,26 +487,6 @@ install_grafana() {
     docker cp grafana:/var/lib/grafana /opt/docker/apps
     docker cp grafana:/var/log/grafana /opt/docker/log
     docker rm -f grafana
-
-    # 定义文件路径
-    touch /opt/docker/compose/grafana/grafana.env
-    output_file="/opt/docker/compose/grafana/grafana.env" > "$output_file"  # 清空文件内容
-    echo "GF_PATHS_CONFIG=/etc/grafana/grafana.ini" >> "$output_file"
-    echo "GF_PATHS_DATA=/var/lib/grafana" >> "$output_file"
-    echo "GF_PATHS_HOME=/usr/share/grafana" >> "$output_file"
-    echo "GF_PATHS_LOGS=/var/log/grafana" >> "$output_file"
-    echo "GF_PATHS_PLUGINS=/var/lib/grafana/plugins" >> "$output_file"
-    echo "GF_PATHS_PROVISIONING=/etc/grafana/provisioning" >> "$output_file"
-    read -p "请输入管理员用户名(默认:root): " GF_SECURITY_ADMIN_USER
-    GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-root}
-    read -p "请输入管理员密码(默认:12345678): " GF_SECURITY_ADMIN_PASSWORD
-    GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-12345678}
-    read -p "是否允许用户注册(默认:false): " GF_USERS_ALLOW_SIGN_UP
-    GF_USERS_ALLOW_SIGN_UP=${GF_USERS_ALLOW_SIGN_UP:-false}
-
-    echo "GF_SECURITY_ADMIN_USER= $GF_SECURITY_ADMIN_USER" >> "$output_file"
-    echo "GF_SECURITY_ADMIN_PASSWORD= $GF_SECURITY_ADMIN_PASSWORD" >> "$output_file"
-    echo "GF_USERS_ALLOW_SIGN_UP= $GF_USERS_ALLOW_SIGN_UP" >> "$output_file"
 
     # -O 参数指定下载文件的保存路径
     wget -O /opt/docker/compose/grafana/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/grafana/compose.yml
@@ -530,6 +539,46 @@ install_prometheus() {
         echo "Prometheus 安装成功！"
     else
         echo "Prometheus 安装失败！"
+    fi
+}
+
+install_victoriametrics() {
+    # 创建目录
+    mkdir -p /opt/docker/{apps,config,compose,log}/victoriametrics
+
+    # 安装临时的victoriametrics容器
+    echo "启动临时 Victoriametrics 容器..."
+    docker run -d --name victoriametrics -p 8428:8428 victoriametrics/victoria-metrics:v1.109.0 --storageDataPath=/storage 
+
+    # 等待 Victoriametrics 健康
+    echo "等待 Victoriametrics 完全启动..."
+    while true; do
+        if curl -s -o /dev/null -w "%{http_code}" http://localhost:8428/-/healthy | grep -q "200"; then
+            echo "Victoriametrics 完全启动,进行下一步"
+            break
+        else
+            echo "等待 Victoriametrics 完全启动中..."
+            sleep 2
+        fi
+    done
+
+    # 拷贝容器内的文件到本地
+    docker cp victoriametrics:/storage/. /opt/docker/apps/victoriametrics
+
+    # 删除临时容器
+    docker rm -f victoriametrics
+    docker volume prune -a -f
+
+    # -O 参数指定下载文件的保存路径
+    wget -O /opt/docker/compose/victoriametrics/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/victoriametrics/compose.yml
+    
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/victoriametrics/compose.yml up -d
+
+    if [ $? -eq 0 ]; then
+        echo "Victoriametrics 安装成功！"
+    else
+        echo "Victoriametrics 安装失败！"
     fi
 }
 

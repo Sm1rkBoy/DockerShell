@@ -1,6 +1,6 @@
 services:
     mysql:
-        image: mysql:8.4.0
+        image: mysql:8.4.3
         container_name: mysql
         restart: on-failure:3
         networks:
@@ -12,6 +12,9 @@ services:
             - /opt/docker/log/mysql:/var/log/mysql
             - /opt/docker/config/mysql/conf.d:/etc/mysql/conf.d
             - /opt/docker/config/mysql/my.cnf:/etc/my.cnf
+        command:
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_general_ci
         # ports:
         #   - 3306:3306
         env_file:

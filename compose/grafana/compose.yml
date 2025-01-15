@@ -2,6 +2,7 @@ services:
     grafana:
         image: grafana/grafana:latest
         container_name: grafana
+        user: root
         restart: on-failure:3
         networks:
             universal: null
@@ -15,9 +16,9 @@ services:
             - grafana.env
         healthcheck:
             test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/health']
-            interval: 30s
+            interval: 10s
             timeout: 10s
-            retries: 3
+            retries: 10
             start_period: 10s
         labels:
             com.centurylinklabs.watchtower.enable: true

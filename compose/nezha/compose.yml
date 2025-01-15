@@ -7,8 +7,8 @@ services:
             universal: null
         volumes:
             - /opt/docker/apps/nezha:/dashboard/data
-        ports:
-            - 8008:8008
+        # ports:
+        #     - 8008:8008
         labels:
             com.centurylinklabs.watchtower.enable: false
 networks:

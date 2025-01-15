@@ -1,40 +1,65 @@
 #!/bin/bash
 
-# 检查universal网络是否存在
-echo "正在检查Docker网络设置"
-if docker network inspect universal >/dev/null 2>&1; then
-    echo "universal网络已存在"
-else
-    echo "创建universal网络..."
-    sudo docker network create universal
-fi
+# 定义函数 check_docker
+check_docker() {
+    if ! command -v docker &> /dev/null; then
+        echo "Docker 未安装，请先安装 Docker。"
+        exit 1
+    else
+        echo "Docker 已安装，继续执行脚本。"
+    fi
+}
+
+# 定义函数 check_and_create_network
+check_dockerNetwork() {
+    local network_name="universal"  # 定义网络名称
+
+    echo "正在检查Docker网络设置..."
+    if docker network inspect "$network_name" >/dev/null 2>&1; then
+        echo "$network_name 网络已存在。"
+    else
+        echo "创建 $network_name 网络..."
+        sudo docker network create "$network_name"
+        if [ $? -eq 0 ]; then
+            echo "$network_name 网络创建成功。"
+        else
+            echo "$network_name 网络创建失败，请检查 Docker 是否正常运行。"
+            exit 1
+        fi
+    fi
+}
+
+check_docker
+check_dockerNetwork
 
 # 创建必要的文件夹
 echo "正在创建/opt/docker文件夹"
-mkdir -p /opt/docker/apps    # 存放数据文件以及运行文件
-mkdir -p /opt/docker/config  # 存放配置文件
-mkdir -p /opt/docker/log     # 存放日志文件
-mkdir -p /opt/docker/compose # 存放compose文件和.env文件
+mkdir -p /opt/docker/{apps,config,log,compose}
 
 # 定义容器列表和选择状态数组
 containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "dockge" "nezha" "grafana" "prometheus")
 selected=() # 容器对应的状态(1 1 0 0)表示前两个容器已选中,后两个未选中
 
-# 初始化 selected 数组,检查容器是否已安装
-for i in "${!containers[@]}"; do # !containers[@]表示数组的索引
-    if docker ps -a --format '{{.Names}}' | grep -q "^${containers[$i]}$"; then
-        selected[$i]=1  # 容器已安装,标记为选中
-    else
-        selected[$i]=0  # 容器未安装,标记为未选中
-    fi
-done
+# 检查容器是否安装
+check_installed() {
+    # 初始化 selected 数组,检查容器是否已安装
+    for i in "${!containers[@]}"; do # !containers[@]表示数组的索引,即容器的编号,从0开始,到数组的长度-1
+        if docker ps -a --format '{{.Names}}' | grep -q "^${containers[$i]}$"; then # 检查容器是否已安装
+            selected[$i]=1  # 容器已安装,标记为选中
+        else
+            selected[$i]=0  # 容器未安装,标记为未选中
+        fi
+    done
+}
+
+check_installed
 
 # 显示菜单函数
 show_menu() {
     clear
     echo "请选择要安装的容器 (输入容器对应的数字勾选,按e开始安装,按q退出):"
     for i in "${!containers[@]}"; do
-        if [ "${selected[$i]}" -eq 1 ]; then
+        if [ "${selected[$i]}" -eq 1 ]; then # 判断容器是否安装,如果已经安装则选中
             echo "[*] $((i+1)).${containers[$i]}"
         else
             echo "[ ] $((i+1)).${containers[$i]}"
@@ -42,35 +67,75 @@ show_menu() {
     done
 }
 
+# 检查容器是否正在运行
+is_container_running() {
+    local container_name=$1 # 传入的第一个参数作为容器名
+    local status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2>/dev/null)
+    if [ "$status" == "running" ]; then
+        return 0  # 容器正在运行
+    else
+        return 1  # 容器未运行
+    fi
+}
+
 # 处理用户输入
 handle_input() {
-    read -p "请输入选项: " choice
+    # 提示用户输入
+    echo -n "请选择需要的容器: "
+
+    # 读取第一个字符
+    read -N 1 choice
+
+    # 尝试读取第二个字符（超时时间为 0.2 秒）
+    if read -N 1 -t 0.2 second_char; then
+        choice="$choice$second_char"
+    fi
+
+    # 删除可能的换行符
+    choice=$(echo "$choice" | tr -d '\n')
+
+    echo
     case $choice in
-        q)
-            echo "退出程序"
-            exit 0
-            ;;
-        e)
-            execute_installation
-            ;;
-        [1-9])
-            index=$((choice-1))
-            if [ $index -lt ${#containers[@]} ]; then
-                selected[$index]=$((1-selected[$index]))
+        [1-9]|[1-9][0-9])
+            index=$((choice-1)) # $((...))表示算术运算
+            if [ "$index" -lt "${#containers[@]}" ]; then # 索引小于容器数量 #containers[@]表示数组的个数
+                selected[$index]=$((1 - selected[$index]))  # 切换选择状态
             fi
             ;;
+        e)
+            echo "开始安装选中的容器..."
+            for i in "${!containers[@]}"; do
+                if [ "${selected[$i]}" -eq 1 ]; then
+                    container_name="${containers[$i]}"
+                    if is_container_running "$container_name"; then
+                        echo "容器 $container_name 已经在运行,跳过安装。"
+                    else
+                        echo "正在安装的容器是 $container_name..."
+                        # 动态调用安装函数
+                        install_function="install_$container_name"
+                        if declare -f "$install_function" > /dev/null; then # 判断函数是否被定义
+                            $install_function
+                        else
+                            echo "未知容器: $container_name,跳过安装。"
+                        fi
+                    fi
+                fi
+            done
+            break
+            ;;
+        q)
+            echo "退出脚本。"
+            exit 0
+            ;;
         *)
-            echo "无效选项"
-            sleep 1
+            echo "无效选择,请重新输入。"
             ;;
     esac
 }
 
 install_mysql() {
-    mkdir -p /opt/docker/apps/mysql
-    mkdir -p /opt/docker/config/mysql
-    mkdir -p /opt/docker/compose/mysql
-    mkdir -p /opt/docker/log/mysql
+    # 创建目录
+    mkdir -p /opt/docker/{apps,config,compose,log}/mysql
 
     echo "正在安装 MySQL..."
     # 启动 MySQL 临时容器
@@ -123,8 +188,7 @@ install_mysql() {
 }
 
 install_redis() {
-    mkdir -p /opt/docker/apps/redis
-    mkdir -p /opt/docker/compose/redis
+    mkdir -p /opt/docker/{apps,config,compose,log}/redis
     echo "下载 redis 的compose.yml文件"
     wget -O /opt/docker/compose/redis/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/redis/compose.yml
     # 启动 Docker Compose
@@ -137,9 +201,9 @@ install_redis() {
 }
 
 install_nginx(){
-    mkdir -p /opt/docker/config/nginx
-    mkdir -p /opt/docker/log/nginx
-    mkdir -p /opt/docker/compose/nginx
+    # 创建目录
+    mkdir -p /opt/docker/{apps,config,compose,log}/nginx
+
     # 启动 Nginx 容器
     echo "启动 Nginx 容器..."
     docker run -d --name nginx \
@@ -175,6 +239,7 @@ install_nginx(){
 
 install_watchtower(){
     mkdir -p /opt/docker/compose/watchtower
+
     echo "下载watchtower的compose.yml文件"
     echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
     wget -O /opt/docker/compose/watchtower/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/watchtower/compose.yml
@@ -190,7 +255,9 @@ install_watchtower(){
 }
 
 install_phpmyadmin(){
-    mkdir -p /opt/docker/compose/phpmyadmin
+    # 创建目录
+    mkdir -p /opt/docker/{apps,config,compose,log}/phpmyadmin
+
     echo "下载 phpmyadmin 的compose.yml文件"
     echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
     wget -O /opt/docker/compose/phpmyadmin/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/phpmyadmin/compose.yml
@@ -206,9 +273,8 @@ install_phpmyadmin(){
 }
 
 install_vaultwarden() {
-    mkdir -p /opt/docker/apps/vaultwarden
-    mkdir -p /opt/docker/compose/vaultwarden
-    mkdir -p /opt/docker/log/vaultwarden
+    # 创建目录
+    mkdir -p /opt/docker/{apps,config,compose,log}/vaultwarden
 
     # 初始化配置文件
     CONFIG_FILE="/opt/docker/compose/vaultwarden/vaultwarden.env" > "$CONFIG_FILE"  # 清空文件内容
@@ -326,8 +392,9 @@ install_vaultwarden() {
 }
 
 install_dockge() {
-    mkdir -p /opt/docker/apps/dockge
-    mkdir -p /opt/docker/compose/dockge
+    # 创建目录
+    mkdir -p /opt/docker/{apps,config,compose,log}/dockge
+
     echo "下载 dockge 的compose.yml文件"
     wget -O /opt/docker/compose/dockge/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/dockge/compose.yml
     # 启动 Docker Compose
@@ -340,8 +407,8 @@ install_dockge() {
 }
 
 install_nezha() {
-    mkdir -p /opt/docker/apps/nezha
-    mkdir -p /opt/docker/compose/nezha
+    # 创建目录
+    mkdir -p /opt/docker/{apps,config,compose,log}/nezha
 
     echo "下载 nezha 的compose.yml文件"
     wget -O /opt/docker/compose/nezha/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/nezha/compose.yml
@@ -368,10 +435,8 @@ install_nezha() {
 }
 
 install_grafana() {
-    mkdir -p /opt/docker/apps/grafana
-    mkdir -p /opt/docker/config/grafana
-    mkdir -p /opt/docker/compose/grafana
-    mkdir -p /opt/docker/log/grafana
+    # 创建目录
+    mkdir -p /opt/docker/{apps,config,compose,log}/grafana
 
     echo "正在安装 Grafana..."
     # 启动 Grafana 临时容器
@@ -427,69 +492,49 @@ install_grafana() {
     fi
 }
 
-# 检查容器是否正在运行
-is_container_running() {
-    local container_name=$1 # 传入的第一个参数作为容器名
-    local status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2>/dev/null)
-    if [ "$status" == "running" ]; then
-        return 0  # 容器正在运行
+install_prometheus() {
+    # 创建目录
+    mkdir -p /opt/docker/{apps,config,compose,log}/prometheus
+
+    # 安装临时的prometheus容器
+    echo "启动 Prometheus 容器..."
+    docker run -d --name prometheus -p 9090:9090 prom/prometheus:latest
+
+    # 等待 Prometheus健康
+    echo "等待 Prometheus完全启动..."
+    while true; do
+        if curl -s -o /dev/null -w "%{http_code}" http://localhost:9090/-/healthy | grep -q "200"; then
+            echo "Prometheus完全启动,进行下一步"
+            break
+        else
+            echo "等待Prometheus完全启动中..."
+            sleep 5
+        fi
+    done
+
+    # 拷贝容器内的文件到本地
+    docker cp prometheus:/etc/prometheus /opt/docker/config
+    docker cp prometheus:/prometheus /opt/docker/apps
+
+    # 删除临时容器
+    docker rm -f prometheus
+    docker volume prune -a -f
+
+    # -O 参数指定下载文件的保存路径
+    wget -O /opt/docker/compose/prometheus/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/prometheus/compose.yml
+    
+    # 启动 Docker Compose
+    docker compose -f /opt/docker/compose/prometheus/compose.yml up -d
+
+    if [ $? -eq 0 ]; then
+        echo "Prometheus 安装成功！"
     else
-        return 1  # 容器未运行
+        echo "Prometheus 安装失败！"
     fi
 }
 
 # 主循环
 while true; do
     show_menu
-    # 提示用户输入
-    echo -n "请选择需要的容器: "
-
-    # 读取第一个字符
-    read -N 1 choice
-
-    # 尝试读取第二个字符（超时时间为 0.15 秒）
-    if read -N 1 -t 0.15 second_char; then
-        choice="$choice$second_char"
-    fi
-
-    # 删除可能的换行符
-    choice=$(echo "$choice" | tr -d '\n')
-
-    echo
-    case $choice in
-        [1-9]|[1-9][0-9])
-            index=$((choice-1)) # $((...))表示算术运算
-            if [ "$index" -lt "${#containers[@]}" ]; then # 索引小于容器数量 #containers[@]表示数组的个数
-                selected[$index]=$((1 - selected[$index]))  # 切换选择状态
-            fi
-            ;;
-        e)
-            echo "开始安装选中的容器..."
-            for i in "${!containers[@]}"; do
-                if [ "${selected[$i]}" -eq 1 ]; then
-                    container_name="${containers[$i]}"
-                    if is_container_running "$container_name"; then
-                        echo "容器 $container_name 已经在运行,跳过安装。"
-                    else
-                        echo "正在安装的容器是 $container_name..."
-                        # 动态调用安装函数
-                        install_function="install_$container_name"
-                        if declare -f "$install_function" > /dev/null; then # 判断函数是否被定义
-                            $install_function
-                        else
-                            echo "未知容器: $container_name,跳过安装。"
-                        fi
-                    fi
-                fi
-            done
-            break
-            ;;
-        q)
-            echo "退出脚本。"
-            exit 0
-            ;;
-        *)
-            echo "无效选择,请重新输入。"
-            ;;
-    esac
+    handle_input
 done

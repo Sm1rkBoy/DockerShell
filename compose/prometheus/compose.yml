@@ -1,0 +1,25 @@
+services:
+    prometheus:
+        image: prom/prometheus:latest
+        container_name: prometheus
+        user: root
+        restart: on-failure:3
+        networks:
+            universal: null
+        command:
+            - --config.file=/etc/prometheus/prometheus.yml # 配置文件路径
+            - --storage.tsdb.path=/prometheus # 数据存储路径
+            - --web.console.libraries=/etc/prometheus/console_libraries # console_libraries路径
+            - --web.console.templates=/etc/prometheus/consoles # consoles路径
+            - --web.enable-lifecycle # 启用生命周期
+            - --web.enable-admin-api # 启用admin api
+        volumes:
+            - /opt/docker/apps/prometheus:/prometheus # 数据存储路径
+            - /opt/docker/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml # 配置文件路径
+        # ports:
+        #   - 9090:9090
+        labels:
+            com.centurylinklabs.watchtower.enable: true
+networks:
+    universal:
+        external: true

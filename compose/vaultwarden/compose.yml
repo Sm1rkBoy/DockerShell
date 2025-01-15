@@ -8,6 +8,8 @@ services:
         volumes:
             - /opt/docker/apps/vaultwarden:/data
             - /opt/docker/log/vaultwarden:/log
+        # ports:
+        #   - 80:80
         env_file:
             - vaultwarden.env
 

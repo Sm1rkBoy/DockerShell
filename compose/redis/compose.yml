@@ -6,7 +6,7 @@ services:
         networks:
             universal: null
         volumes:
-            - /opt/docker/apps/redis:/data/
+            - /opt/docker/redis/apps:/data/
         # ports:
         #   - 6379:6379
         labels:

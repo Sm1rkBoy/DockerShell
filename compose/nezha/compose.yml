@@ -6,7 +6,7 @@ services:
         networks:
             universal: null
         volumes:
-            - /opt/docker/apps/nezha:/dashboard/data
+            - /opt/docker/nezha/apps:/dashboard/data
         # ports:
         #     - 8008:8008
         labels:

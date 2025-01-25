@@ -28,16 +28,15 @@ check_dockerNetwork() {
         fi
     fi
 }
-
 check_docker
 check_dockerNetwork
 
 # 创建必要的文件夹
 echo "正在创建/opt/docker文件夹"
-mkdir -p /opt/docker/{apps,config,log,compose}
+mkdir -p /opt/docker
 
 # 定义容器列表和选择状态数组
-containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "dockge" "nezha" "grafana" "prometheus" "victoriametrics")
+containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "nezha" "grafana" "prometheus" "victoriametrics")
 selected=() # 容器对应的状态(1 1 0 0)表示前两个容器已选中,后两个未选中
 
 # 检查容器是否安装
@@ -135,7 +134,7 @@ handle_input() {
 
 install_mysql() {
     # 创建目录
-    mkdir -p /opt/docker/{apps,config,compose,log}/mysql
+    mkdir -p /opt/docker/mysql/{apps,config,compose,log}
 
     # 提示用户输入 MySQL root 密码
     read -s -p "请输入MySQL密码(root): " rootPassword
@@ -148,11 +147,11 @@ install_mysql() {
     fi
 
     # 将密码写入 .env 文件
-    touch /opt/docker/compose/mysql/mysql.env
-    echo "MYSQL_ROOT_PASSWORD=$rootPassword" > /opt/docker/compose/mysql/mysql.env
+    touch /opt/docker/mysql/compose/mysql.env
+    echo "MYSQL_ROOT_PASSWORD=$rootPassword" > /opt/docker/mysql/compose/mysql.env
 
     # 提示用户 .env 文件已创建
-    echo "密码已经写入/opt/docker/compose/mysql/mysql.env"
+    echo "密码已经写入/opt/docker/mysql/compose/mysql.env"
 
     echo "正在启动临时 MySQL 容器..."
     # 启动 MySQL 临时容器
@@ -171,15 +170,14 @@ install_mysql() {
         sleep 1
     done
 
-    docker cp mysql:/etc/my.cnf /opt/docker/config/mysql
+    docker cp mysql:/etc/my.cnf /opt/docker/mysql/config/.
     docker rm -f mysql
 
-
     # -O 参数指定下载文件的保存路径
-    wget -O /opt/docker/compose/mysql/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/mysql/compose.yml
+    wget -O /opt/docker/mysql/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/mysql/compose.yml
 
     # 启动 Docker Compose
-    docker compose -f /opt/docker/compose/mysql/compose.yml up -d
+    docker compose -f /opt/docker/mysql/compose/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "MySQL 安装成功！"
@@ -189,11 +187,11 @@ install_mysql() {
 }
 
 install_redis() {
-    mkdir -p /opt/docker/{apps,config,compose,log}/redis
+    mkdir -p /opt/docker/redis/{apps,config,compose,log}
     echo "下载 redis 的compose.yml文件"
-    wget -O /opt/docker/compose/redis/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/redis/compose.yml
+    wget -O /opt/docker/redis/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/redis/compose.yml
     # 启动 Docker Compose
-    docker compose -f /opt/docker/compose/redis/compose.yml up -d
+    docker compose -f /opt/docker/redis/compose/compose.yml up -d
     if [ $? -eq 0 ]; then
         echo "redis 安装成功！"
     else
@@ -203,7 +201,7 @@ install_redis() {
 
 install_nginx(){
     # 创建目录
-    mkdir -p /opt/docker/{apps,config,compose,log}/nginx
+    mkdir -p /opt/docker/nginx/{apps,config,compose,log}
 
     # 启动 Nginx 容器
     echo "启动 Nginx 容器..."
@@ -219,8 +217,8 @@ install_nginx(){
         sleep 1
     done
 
-    echo "拷贝/etc/nginx文件到到本地文件/opt/docker/config/nginx"
-    docker cp nginx:/etc/nginx /opt/docker/config/
+    echo "拷贝/etc/nginx文件到到本地文件/opt/docker/nginx/config"
+    docker cp nginx:/etc/nginx/. /opt/docker/nginx/config
 
     echo "删除临时nginx容器"
     docker rm -f nginx
@@ -239,14 +237,13 @@ install_nginx(){
 }
 
 install_watchtower(){
-    mkdir -p /opt/docker/compose/watchtower
+    mkdir -p /opt/docker/watchtower/compose
 
     echo "下载watchtower的compose.yml文件"
-    echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
-    wget -O /opt/docker/compose/watchtower/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/watchtower/compose.yml
+    wget -O /opt/docker/watchtower/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/watchtower/compose.yml
 
     # 启动 Docker Compose
-    docker compose -f /opt/docker/compose/watchtower/compose.yml up -d
+    docker compose -f /opt/docker/watchtower/compose/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "watchtower 安装成功！"
@@ -257,14 +254,13 @@ install_watchtower(){
 
 install_phpmyadmin(){
     # 创建目录
-    mkdir -p /opt/docker/{apps,config,compose,log}/phpmyadmin
+    mkdir -p /opt/docker/phpmyadmin/{apps,config,compose,log}
 
     echo "下载 phpmyadmin 的compose.yml文件"
-    echo "该容器不需要在/opt/docker/apps文件夹下创建文件夹"
-    wget -O /opt/docker/compose/phpmyadmin/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/phpmyadmin/compose.yml
+    wget -O /opt/docker/phpmyadmin/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/phpmyadmin/compose.yml
 
     # 启动 Docker Compose
-    docker compose -f /opt/docker/compose/phpmyadmin/compose.yml up -d
+    docker compose -f /opt/docker/phpmyadmin/compose/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "phpmyadmin 安装成功！"
@@ -275,10 +271,10 @@ install_phpmyadmin(){
 
 install_vaultwarden() {
     # 创建目录
-    mkdir -p /opt/docker/{apps,config,compose,log}/vaultwarden
+    mkdir -p /opt/docker/vaultwarden/{apps,config,compose,log}
 
     # 初始化配置文件
-    CONFIG_FILE="/opt/docker/compose/vaultwarden/vaultwarden.env" > "$CONFIG_FILE"  # 清空文件内容
+    CONFIG_FILE="/opt/docker/vaultwarden/compose/vaultwarden.env" > "$CONFIG_FILE"  # 清空文件内容
 
     echo "# log文件设置" >> "$CONFIG_FILE"
     echo "LOG_FILE=/log/vaultwarden.log" >> "$CONFIG_FILE"
@@ -377,48 +373,33 @@ install_vaultwarden() {
     fi
 
     # -O 参数指定下载文件的保存路径
-    wget -O /opt/docker/compose/vaultwarden/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/vaultwarden/compose.yml
+    wget -O /opt/docker/vaultwarden/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/vaultwarden/compose.yml
 
     # 启动 Docker Compose
-    docker compose -f /opt/docker/compose/vaultwarden/compose.yml up -d
+    docker compose -f /opt/docker/vaultwarden/compose/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "vaultwarden 安装成功！"
     else
         echo "vaultwarden 安装失败！"
     fi
-    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
-    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
-    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
-}
-
-install_dockge() {
-    # 创建目录
-    mkdir -p /opt/docker/{apps,config,compose,log}/dockge
-
-    echo "下载 dockge 的compose.yml文件"
-    wget -O /opt/docker/compose/dockge/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/dockge/compose.yml
-    # 启动 Docker Compose
-    docker compose -f /opt/docker/compose/dockge/compose.yml up -d
-    if [ $? -eq 0 ]; then
-        echo "dockge 安装成功！"
-    else
-        echo "dockge 安装失败！"
-    fi
+    echo "Admin面板的token存储在/opt/docker/vaultwarden/compose/vaultwarden.env文件中"
+    echo "Admin面板的token存储在/opt/docker/vaultwarden/compose/vaultwarden.env文件中"
+    echo "Admin面板的token存储在/opt/docker/vaultwarden/compose/vaultwarden.env文件中"
 }
 
 install_nezha() {
     # 创建目录
-    mkdir -p /opt/docker/{apps,config,compose,log}/nezha
+    mkdir -p /opt/docker/nezha/{apps,config,compose,log}
 
     echo "下载 nezha 的compose.yml文件"
-    wget -O /opt/docker/compose/nezha/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/nezha/compose.yml
+    wget -O /opt/docker/nezha/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/nezha/compose.yml
 
     # 启动 Docker Compose
-    docker compose -f /opt/docker/compose/nezha/compose.yml up -d
+    docker compose -f /opt/docker/nezha/compose/compose.yml up -d
 
     # 定义要修改的文件路径
-    CONFIG_FILE="/opt/docker/apps/nezha/config.yaml"
+    CONFIG_FILE="/opt/docker/nezha/apps/config.yaml"
     read -p "请输入网站徽标: " SITENAME
     sed -i "s/sitename: .*/sitename: $SITENAME/" "$CONFIG_FILE"
     read -p "请输入Agent对接地址(IP:PORT): " INSTALLHOST
@@ -426,7 +407,7 @@ install_nezha() {
     sed -i 's/language: .*/language: zh_CN/' "$CONFIG_FILE"
 
     # 重新启动 Docker Compose 重建nezha
-    docker compose -f /opt/docker/compose/nezha/compose.yml up -d
+    docker compose -f /opt/docker/nezha/compose/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "nezha 安装成功！"
@@ -437,11 +418,11 @@ install_nezha() {
 
 install_grafana() {
     # 创建目录
-    mkdir -p /opt/docker/{apps,config,compose,log}/grafana
+    mkdir -p /opt/docker/grafana/{apps,config,compose,log}
 
     # 定义文件路径
-    touch /opt/docker/compose/grafana/grafana.env
-    output_file="/opt/docker/compose/grafana/grafana.env" > "$output_file"  # 清空文件内容
+    touch /opt/docker/grafana/compose/grafana.env
+    output_file="/opt/docker/grafana/compose/grafana.env" > "$output_file"  # 清空文件内容
     echo "GF_PATHS_CONFIG=/etc/grafana/grafana.ini" >> "$output_file"
     echo "GF_PATHS_DATA=/var/lib/grafana" >> "$output_file"
     echo "GF_PATHS_HOME=/usr/share/grafana" >> "$output_file"
@@ -483,16 +464,16 @@ install_grafana() {
         sleep 1
     done
 
-    docker cp grafana:/etc/grafana /opt/docker/config
-    docker cp grafana:/var/lib/grafana /opt/docker/apps
-    docker cp grafana:/var/log/grafana /opt/docker/log
+    docker cp grafana:/etc/grafana/. /opt/docker/grafana/config
+    docker cp grafana:/var/lib/grafana/. /opt/docker/grafana/apps
+    docker cp grafana:/var/log/grafana/. /opt/docker/grafana/log
     docker rm -f grafana
 
     # -O 参数指定下载文件的保存路径
-    wget -O /opt/docker/compose/grafana/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/grafana/compose.yml
+    wget -O /opt/docker/grafana/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/grafana/compose.yml
 
     # 启动 Docker Compose
-    docker compose -f /opt/docker/compose/grafana/compose.yml up -d
+    docker compose -f /opt/docker/grafana/compose/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "Grafana 安装成功！"
@@ -503,7 +484,7 @@ install_grafana() {
 
 install_prometheus() {
     # 创建目录
-    mkdir -p /opt/docker/{apps,config,compose,log}/prometheus
+    mkdir -p /opt/docker/prometheus/{apps,config,compose,log}
 
     # 安装临时的prometheus容器
     echo "启动 Prometheus 容器..."
@@ -522,18 +503,18 @@ install_prometheus() {
     done
 
     # 拷贝容器内的文件到本地
-    docker cp prometheus:/etc/prometheus /opt/docker/config
-    docker cp prometheus:/prometheus /opt/docker/apps
+    docker cp prometheus:/etc/prometheus/. /opt/docker/prometheus/config
+    docker cp prometheus:/prometheus/. /opt/docker/prometheus/apps
 
     # 删除临时容器
     docker rm -f prometheus
     docker volume prune -a -f
 
     # -O 参数指定下载文件的保存路径
-    wget -O /opt/docker/compose/prometheus/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/prometheus/compose.yml
+    wget -O /opt/docker/prometheus/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/prometheus/compose.yml
     
     # 启动 Docker Compose
-    docker compose -f /opt/docker/compose/prometheus/compose.yml up -d
+    docker compose -f /opt/docker/prometheus/compose/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "Prometheus 安装成功！"
@@ -544,7 +525,18 @@ install_prometheus() {
 
 install_victoriametrics() {
     # 创建目录
-    mkdir -p /opt/docker/{apps,config,compose,log}/victoriametrics
+    mkdir -p /opt/docker/victoriametrics/{apps,config,compose,log}
+
+    # 读取用户名和密码
+    read -p "请输入 VictoriaMetrics 的用户名: " VM_USERNAME
+    read -sp "请输入 VictoriaMetrics 的密码: " VM_PASSWORD
+    echo "" # 换行
+
+    # 检查输入是否为空
+    if [[ -z "$VM_USERNAME" || -z "$VM_PASSWORD" ]]; then
+        echo "错误：用户名和密码不能为空！"
+        exit 1
+    fi
 
     # 安装临时的victoriametrics容器
     echo "启动临时 Victoriametrics 容器..."
@@ -563,17 +555,20 @@ install_victoriametrics() {
     done
 
     # 拷贝容器内的文件到本地
-    docker cp victoriametrics:/storage/. /opt/docker/apps/victoriametrics
+    docker cp victoriametrics:/storage/. /opt/docker/victoriametrics/apps
 
     # 删除临时容器
     docker rm -f victoriametrics
     docker volume prune -a -f
 
     # -O 参数指定下载文件的保存路径
-    wget -O /opt/docker/compose/victoriametrics/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/victoriametrics/compose.yml
+    wget -O /opt/docker/victoriametrics/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/victoriametrics/compose.yml
+
+    # 使用 sed 替换占位符
+    sed -i -e "s/__USERNAME__/${VM_USERNAME}/g" -e "s/__PASSWORD__/${VM_PASSWORD}/g" "/opt/docker/victoriametrics/compose/compose.yml"
     
     # 启动 Docker Compose
-    docker compose -f /opt/docker/compose/victoriametrics/compose.yml up -d
+    docker compose -f /opt/docker/victoriametrics/compose/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "Victoriametrics 安装成功！"

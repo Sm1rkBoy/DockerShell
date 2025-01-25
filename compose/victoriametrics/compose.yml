@@ -2,7 +2,6 @@ services:
     victoriametrics:
         image: victoriametrics/victoria-metrics:v1.109.0
         container_name: victoriametrics
-        user: root
         restart: on-failure:3
         networks:
             universal: null
@@ -13,7 +12,12 @@ services:
         command:
             - --storageDataPath=/storage
             - --httpListenAddr=:8428
-            - --retentionPeriod=1
+            - --httpAuth.username=__USERNAME__
+            - --httpAuth.password=__PASSWORD__
+            - --retentionPeriod=90d
+        # 自动更新标签
+        labels:
+            com.centurylinklabs.watchtower.enable: true
 
 networks:
     universal:

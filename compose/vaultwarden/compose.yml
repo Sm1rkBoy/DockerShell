@@ -6,12 +6,15 @@ services:
         networks:
             universal: null
         volumes:
-            - /opt/docker/apps/vaultwarden:/data
-            - /opt/docker/log/vaultwarden:/log
+            - /opt/docker/vaultwarden/apps:/data
+            - /opt/docker/vaultwarden/log:/log
         # ports:
         #   - 80:80
         env_file:
             - vaultwarden.env
+        # 自动更新标签
+        labels:
+            com.centurylinklabs.watchtower.enable: true
 
 networks:
     universal:

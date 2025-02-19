@@ -8,7 +8,7 @@ services:
         # ports:
         #     - 8428:8428
         volumes:
-            - /opt/docker/apps/victoriametrics:/storage
+            - /opt/docker/victoriametrics/apps:/storage
         command:
             - --storageDataPath=/storage
             - --httpListenAddr=:8428

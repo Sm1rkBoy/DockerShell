@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# 检查docker是否安装
 check_docker() {
     if ! command -v docker &> /dev/null; then
         echo "Docker 未安装，请先安装 Docker。"
@@ -9,6 +10,7 @@ check_docker() {
     fi
 }
 
+# 检查Docker网络设置
 check_dockerNetwork() {
     local network_name="universal"
 

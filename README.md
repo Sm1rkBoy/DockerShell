@@ -42,12 +42,6 @@ docker system prune -a -f
 docker volume prune -a -f
 ```
 
-## 致谢
-
-特别感谢 [YxVM](https://yxvm.com) 提供的免费服务器支持！
-
-![YxVM Logo](https://yxvm.com/assets/img/logo.png)
-
 ## 许可证
 
 [![license](https://img.shields.io/github/license/Sm1rkBoy/DockerShell.svg?style=flat-square)](https://github.com/Sm1rkBoy/DockerShell/main/LICENSE)

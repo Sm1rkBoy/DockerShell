@@ -19,8 +19,7 @@ services:
             timeout: 10s
             retries: 10
             start_period: 10s
-        labels:
-            com.centurylinklabs.watchtower.enable: true
+
 networks:
     universal:
         external: true

@@ -2,7 +2,9 @@
 
 install_victoriametrics() {
     # 创建目录
-    mkdir -p /opt/docker/victoriametrics/{apps,config,compose,log}
+    mkdir -p /opt/docker/temp
+    mkdir -p /opt/docker/compose/victoriametrics
+    mkdir -p /opt/docker/victoriametrics/apps
 
     # 读取用户名和密码
     read -p "请输入 VictoriaMetrics 的用户名: " VM_USERNAME
@@ -15,37 +17,16 @@ install_victoriametrics() {
         exit 1
     fi
 
-    # 安装临时的victoriametrics容器
-    echo "启动临时 Victoriametrics 容器..."
-    docker run -d --name victoriametrics -p 8428:8428 victoriametrics/victoria-metrics:v1.109.0 --storageDataPath=/storage 
-
-    # 等待 Victoriametrics 健康
-    echo "等待 Victoriametrics 完全启动..."
-    while true; do
-        if curl -s -o /dev/null -w "%{http_code}" http://localhost:8428/-/healthy | grep -q "200"; then
-            echo "Victoriametrics 完全启动,进行下一步"
-            break
-        else
-            echo "等待 Victoriametrics 完全启动中..."
-            sleep 2
-        fi
-    done
-
-    # 拷贝容器内的文件到本地
-    docker cp victoriametrics:/storage/. /opt/docker/victoriametrics/apps
-
-    # 删除临时容器
-    docker rm -f victoriametrics
-    docker volume prune -a -f
-
-    # -O 参数指定下载文件的保存路径
-    wget -O /opt/docker/victoriametrics/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/victoriametrics/compose.yml
+    wget -O /opt/docker/temp/victoriametrics.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/temp/victoriametrics.yml
+    wget -O /opt/docker/compose/victoriametrics/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/victoriametrics/compose.yml
 
     # 使用 sed 替换占位符
-    sed -i -e "s/__USERNAME__/${VM_USERNAME}/g" -e "s/__PASSWORD__/${VM_PASSWORD}/g" "/opt/docker/victoriametrics/compose/compose.yml"
+    sed -i -e "s/__USERNAME__/${VM_USERNAME}/g" -e "s/__PASSWORD__/${VM_PASSWORD}/g" "/opt/docker/compose/victoriametrics/compose.yml"
     
     # 启动 Docker Compose
-    docker compose -f /opt/docker/victoriametrics/compose/compose.yml up -d
+    docker compose -f /opt/docker/temp/victoriametrics.yml up -d
+    docker compose -f /opt/docker/temp/victoriametrics.yml down --volumes
+    docker compose -f /opt/docker/compose/victoriametrics/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "Victoriametrics 安装成功！"

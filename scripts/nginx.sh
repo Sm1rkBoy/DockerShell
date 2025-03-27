@@ -2,30 +2,16 @@
 
 install_nginx(){
     # 创建目录
-    mkdir -p /opt/docker/nginx/{apps,config,compose,log}
-
-    # 启动 Nginx 容器
-    echo "启动 Nginx 容器..."
-    docker run -d --name nginx \
-        --health-cmd="curl -f http://localhost || exit 1" \
-        --health-interval=5s \
-        --health-timeout=3s \
-        --health-retries=3 \
-        nginx:latest
-
-    # 当容器完全启动再执行docker cp命令
-    while [[ $(docker inspect -f '{{.State.Health.Status}}' nginx) != "healthy" ]]; do
-        sleep 1
-    done
-
-    echo "拷贝/etc/nginx文件到到本地文件/opt/docker/nginx/config"
-    docker cp nginx:/etc/nginx/. /opt/docker/nginx/config
-
-    echo "删除临时nginx容器"
-    docker rm -f nginx
+    mkdir -p /opt/docker/temp
+    mkdir -p /opt/docker/compose/nginx
+    mkdir -p /opt/docker/nginx/{config,log}
 
     echo "下载nginx的compose.yml文件"
+    wget -O /opt/docker/temp/nginx.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/temp/nginx.yml
     wget -O /opt/docker/compose/nginx/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/nginx/compose.yml
+
+    docker compose -f /opt/docker/temp/nginx.yml up -d
+    docker compose -f /opt/docker/temp/nginx.yml down --volumes
 
     # 启动 Docker Compose
     docker compose -f /opt/docker/compose/nginx/compose.yml up -d

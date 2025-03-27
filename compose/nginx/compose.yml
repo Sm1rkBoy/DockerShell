@@ -11,8 +11,7 @@ services:
         ports:
             - 80:80
             - 443:443
-        labels:
-            com.centurylinklabs.watchtower.enable: true
+
 networks:
     universal:
         external: true

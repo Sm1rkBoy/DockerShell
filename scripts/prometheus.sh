@@ -3,37 +3,19 @@
 
 install_prometheus() {
     # 创建目录
-    mkdir -p /opt/docker/prometheus/{apps,config,compose,log}
-
-    # 安装临时的prometheus容器
-    echo "启动 Prometheus 容器..."
-    docker run -d --name prometheus -p 9090:9090 prom/prometheus:latest
-
-    # 等待 Prometheus健康
-    echo "等待 Prometheus完全启动..."
-    while true; do
-        if curl -s -o /dev/null -w "%{http_code}" http://localhost:9090/-/healthy | grep -q "200"; then
-            echo "Prometheus完全启动,进行下一步"
-            break
-        else
-            echo "等待Prometheus完全启动中..."
-            sleep 5
-        fi
-    done
-
-    # 拷贝容器内的文件到本地
-    docker cp prometheus:/etc/prometheus/. /opt/docker/prometheus/config
-    docker cp prometheus:/prometheus/. /opt/docker/prometheus/apps
-
-    # 删除临时容器
-    docker rm -f prometheus
-    docker volume prune -a -f
+    mkdir -p /opt/docker/temp
+    mkdir -p /opt/docker/compose/prometheus
+    mkdir -p /opt/docker/prometheus/{apps,config}
 
     # -O 参数指定下载文件的保存路径
-    wget -O /opt/docker/prometheus/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/prometheus/compose.yml
+    wget -O /opt/docker/temp/promtheus.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/temp/promtheus.yml
+    wget -O /opt/docker/compose/promtheus/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/promtheus/compose.yml
+
+    docker compose -f /opt/docker/temp/promtheus.yml up -d
+    docker compose -f /opt/docker/temp/promtheus.yml down --volumes
     
     # 启动 Docker Compose
-    docker compose -f /opt/docker/prometheus/compose/compose.yml up -d
+    docker compose -f /opt/docker/compose/promtheus/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "Prometheus 安装成功！"

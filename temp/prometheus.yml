@@ -13,11 +13,27 @@ services:
             - --web.enable-lifecycle # 启用生命周期
             - --web.enable-admin-api # 启用admin api
         volumes:
-            - /opt/docker/prometheus/apps:/prometheus # 数据存储路径
-            - /opt/docker/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml # 配置文件路径
+            - prom_data:/prometheus # 数据存储路径
+            - prom_config:/etc/prometheus/prometheus.yml # 配置文件路径
         # ports:
         #   - 9090:9090
-        
+
 networks:
     universal:
         external: true
+
+volumes:
+    prom_data:
+        name: prom_data
+        driver: local
+        driver_opts:
+            type: none
+            device: /opt/docker/prometheus/apps
+            o: bind
+    prom_config:
+        name: prom_config
+        driver: local
+        driver_opts:
+            type: none
+            device: /opt/docker/prometheus/config
+            o: bind

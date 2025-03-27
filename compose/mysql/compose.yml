@@ -19,8 +19,7 @@ services:
         #   - 3306:3306
         env_file:
             - mysql.env
-        labels:
-            com.centurylinklabs.watchtower.enable: true
+
 networks:
     universal:
         external: true

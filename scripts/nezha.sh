@@ -2,13 +2,17 @@
 
 install_nezha() {
     # 创建目录
-    mkdir -p /opt/docker/nezha/{apps,config,compose,log}
+    mkdir -p /opt/docker/temp
+    mkdir -p /opt/docker/compose/nezha
+    mkdir -p /opt/docker/nezha/apps
 
     echo "下载 nezha 的compose.yml文件"
-    wget -O /opt/docker/nezha/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/nezha/compose.yml
+    wget -O /opt/docker/temp/nezha.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/temp/nezha.yml
+    wget -O /opt/docker/compose/nezha/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/nezha/compose.yml
 
     # 启动 Docker Compose
-    docker compose -f /opt/docker/nezha/compose/compose.yml up -d
+    docker compose -f /opt/docker/temp/nezha.yml up -d
+    docker compose -f /opt/docker/temp/nezha.yml down --volumes
 
     # 定义要修改的文件路径
     CONFIG_FILE="/opt/docker/nezha/apps/config.yaml"
@@ -18,8 +22,8 @@ install_nezha() {
     sed -i "s/installhost: .*/installhost: $INSTALLHOST/" "$CONFIG_FILE"
     sed -i 's/language: .*/language: zh_CN/' "$CONFIG_FILE"
 
-    # 重新启动 Docker Compose 重建nezha
-    docker compose -f /opt/docker/nezha/compose/compose.yml up -d
+    # Docker Compose启动
+    docker compose -f /opt/docker/compose/nezha/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "nezha 安装成功！"

@@ -12,9 +12,6 @@ services:
         #   - 80:80
         env_file:
             - vaultwarden.env
-        # 自动更新标签
-        labels:
-            com.centurylinklabs.watchtower.enable: true
 
 networks:
     universal:

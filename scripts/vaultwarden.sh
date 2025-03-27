@@ -2,10 +2,12 @@
 
 install_vaultwarden() {
     # 创建目录
-    mkdir -p /opt/docker/vaultwarden/{apps,config,compose,log}
+    mkdir -p /opt/docker/temp
+    mkdir -p /opt/docker/compose/vaultwarden
+    mkdir -p /opt/docker/vaultwarden/{apps,log}
 
     # 初始化配置文件
-    CONFIG_FILE="/opt/docker/vaultwarden/compose/vaultwarden.env" > "$CONFIG_FILE"  # 清空文件内容
+    CONFIG_FILE="/opt/docker/compose/vaultwarden/vaultwarden.env" > "$CONFIG_FILE"  # 清空文件内容
 
     echo "# log文件设置" >> "$CONFIG_FILE"
     echo "LOG_FILE=/log/vaultwarden.log" >> "$CONFIG_FILE"
@@ -104,17 +106,22 @@ install_vaultwarden() {
     fi
 
     # -O 参数指定下载文件的保存路径
-    wget -O /opt/docker/vaultwarden/compose/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/vaultwarden/compose.yml
+    wget -O /opt/docker/temp/vaultwarden.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/temp/vaultwarden.yml
+    wget -O /opt/docker/compose/vaultwarden/compose.yml https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/compose/vaultwarden/compose.yml
+
+    # 启动临时容器
+    docker compose -f /opt/docker/temp/vaultwarden.yml up -d
+    docker compose -f /opt/docker/temp/vaultwarden.yml down --volumes
 
     # 启动 Docker Compose
-    docker compose -f /opt/docker/vaultwarden/compose/compose.yml up -d
+    docker compose -f /opt/docker/compose/vaultwarden/compose.yml up -d
 
     if [ $? -eq 0 ]; then
         echo "vaultwarden 安装成功！"
     else
         echo "vaultwarden 安装失败！"
     fi
-    echo "Admin面板的token存储在/opt/docker/vaultwarden/compose/vaultwarden.env文件中"
-    echo "Admin面板的token存储在/opt/docker/vaultwarden/compose/vaultwarden.env文件中"
-    echo "Admin面板的token存储在/opt/docker/vaultwarden/compose/vaultwarden.env文件中"
+    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
+    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
+    echo "Admin面板的token存储在/opt/docker/compose/vaultwarden/vaultwarden.env文件中"
 }

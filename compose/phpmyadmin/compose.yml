@@ -9,8 +9,6 @@ services:
             - PMA_ARBITRARY=1
         networks:
             universal: null
-        labels:
-            com.centurylinklabs.watchtower.enable: true
 networks:
     universal:
         external: true

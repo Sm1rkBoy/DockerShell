@@ -14,11 +14,11 @@ bash <(curl -sSL https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/sta
 ## 备份or卸载
 容器的各类数据均保存在`/opt/docker`目录中,对应关系如下所示
 
-- `/opt/docker/apps` 容器的数据保存目录
-- `/opt/docker/log` 容器的日志保存目录
+- `/opt/docker/<容器>/apps` 容器的数据保存目录
+- `/opt/docker/<容器>/log` 容器的日志保存目录
+- `/opt/docker/<容器>/config` 容器启动所需的额外配置文件保存目录
+- `/opt/docker/<容器>/backup` 容器备份目录,**目前暂未启用**
 - `/opt/docker/compose` 容器的启动`compose.yml`保存目录
-- `/opt/docker/config` 容器启动所需的额外配置文件保存目录
-- `/opt/docker/backup` 容器备份目录,**目前暂未启用**
 - `etc`
 
 目前脚本暂未提供卸载,预计在未来实现卸载功能,如果想要实现卸载功能可以参考如下命令
@@ -29,7 +29,7 @@ docker rm -f mysql
 
 # 危险操作!!!!!!
 # 删除mysql容器的数据
-rm -rf /opt/docker/{apps,log,compose,config}/mysql
+rm -rf /opt/docker/mysql
 
 # 卸载全部容器
 docker rm -f $(docker ps -aq)

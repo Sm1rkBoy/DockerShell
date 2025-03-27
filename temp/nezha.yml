@@ -6,10 +6,19 @@ services:
         networks:
             universal: null
         volumes:
-            - /opt/docker/nezha/apps:/dashboard/data
+            - nezha_data:/dashboard/data
         # ports:
         #     - 8008:8008
 
+volumes:
+    nezha_data:
+        name: nezha_data
+        driver: local
+        driver_opts:
+            type: none
+            device: /opt/docker/nezha/apps
+            o: bind
+        
 networks:
     universal:
         external: true

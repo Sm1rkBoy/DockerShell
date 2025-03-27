@@ -1,0 +1,32 @@
+services:
+    vaultwarden:
+        image: vaultwarden/server:latest
+        container_name: vaultwarden
+        restart: on-failure:3
+        networks:
+            universal: null
+        volumes:
+            - vaultwarden_data:/data
+            - /opt/docker/vaultwarden/log:/log
+        # ports:
+        #   - 80:80
+
+networks:
+    universal:
+        external: true
+
+volumes:
+    vaultwarden_data:
+        name: vaultwarden_data
+        driver: local
+        driver_opts:
+            type: none
+            device: /opt/docker/vaultwarden/apps
+            o: bind
+    vaultwarden_log:
+        name: vaultwarden_log
+        driver: local
+        driver_opts:
+            type: none
+            device: /opt/docker/vaultwarden/log
+            o: bind

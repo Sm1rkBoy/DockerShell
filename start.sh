@@ -34,7 +34,7 @@ check_dockerNetwork
 
 # 定义容器列表和选择状态数组
 GITHUB_SCRIPTS_BASE="https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/scripts"
-containers=("mysql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "grafana" "prometheus" "victoriametrics")
+containers=("mysql" "postgresql" "redis" "nginx" "watchtower" "phpmyadmin" "vaultwarden" "grafana" "prometheus" "victoriametrics")
 selected=() # 容器对应的状态(1 1 0 0)表示前两个容器已选中,后两个未选中
 
 # 检查容器是否安装

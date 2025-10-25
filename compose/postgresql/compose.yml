@@ -1,0 +1,20 @@
+services:
+    postgresql:
+        image: postgres
+        container_name: postgresql
+        restart: on-failure:3
+        networks:
+            universal:
+        volumes:
+            - /opt/docker/postgresql/apps:/var/lib/postgresql
+        healthcheck:
+            test: ['CMD', 'pg_isready']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        env_file:
+            - postgresql.env
+
+networks:
+    universal:
+        external: true

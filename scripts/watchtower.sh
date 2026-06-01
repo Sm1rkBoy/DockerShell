@@ -77,7 +77,7 @@ EOF
     echo ""
     echo "下载 Docker Compose 配置文件..."
 
-    wget -O "${COMPOSE_DIR}/compose.yml" "${GITHUB_BASE}/compose/watchtower/compose.yml"
+    download_project_file "compose/watchtower/compose.yml" "${COMPOSE_DIR}/compose.yml"
     if [ $? -eq 0 ]; then
         echo "✓ Docker Compose 配置文件已下载"
     else

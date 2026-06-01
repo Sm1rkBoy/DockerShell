@@ -25,17 +25,6 @@ install_redis() {
     echo "请配置 Redis 参数："
     echo ""
 
-    # Redis 密码
-    read -s -p "请输入 Redis 密码 (留空自动生成): " redisPassword
-    echo ""
-
-    if [ -z "$redisPassword" ]; then
-        redisPassword=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 16)
-        echo "✓ 已生成随机密码: $redisPassword"
-    else
-        echo "✓ 已设置自定义密码"
-    fi
-
     # 最大内存配置
     read -p "请输入最大内存限制 (默认 256mb): " max_memory
     max_memory=${max_memory:-256mb}
@@ -46,12 +35,6 @@ install_redis() {
     echo ""
     echo "保存配置信息..."
 
-    # 保存环境变量
-    cat > "${COMPOSE_DIR}/redis.env" <<EOF
-REDIS_PASSWORD=${redisPassword}
-TZ=Asia/Shanghai
-EOF
-
     # 创建 Redis 配置文件
     cat > "${DATA_DIR}/config/redis.conf" <<EOF
 # Redis 配置文件
@@ -61,9 +44,6 @@ bind 0.0.0.0
 
 # 端口
 port 6379
-
-# 密码
-requirepass ${redisPassword}
 
 # 最大内存
 maxmemory ${max_memory}
@@ -109,7 +89,7 @@ Redis 容器信息
 -----------
 容器名: redis (仅 Docker 网络内访问)
 端口: 6379
-密码: ${redisPassword}
+密码: 未启用
 
 数据目录:
 -----------
@@ -119,12 +99,12 @@ Redis 容器信息
 
 连接命令:
 -----------
-从容器内: docker exec -it redis redis-cli -a "${redisPassword}"
-从其他容器: redis-cli -h redis -p 6379 -a "${redisPassword}"
+从容器内: docker exec -it redis redis-cli
+从其他容器: redis-cli -h redis -p 6379
 
 连接字符串:
 -----------
-redis://:${redisPassword}@redis:6379
+redis://redis:6379
 
 如需从宿主机访问，请手动添加端口映射:
 docker stop redis
@@ -141,8 +121,8 @@ Docker 命令:
 
 性能监控:
 -----------
-docker exec -it redis redis-cli -a "${redisPassword}" INFO
-docker exec -it redis redis-cli -a "${redisPassword}" MONITOR
+docker exec -it redis redis-cli INFO
+docker exec -it redis redis-cli MONITOR
 =====================================
 EOF
 
@@ -152,7 +132,7 @@ EOF
     echo ""
     echo "下载 Docker Compose 配置文件..."
 
-    wget -O "${COMPOSE_DIR}/compose.yml" "${GITHUB_BASE}/compose/redis/compose.yml"
+    download_project_file "compose/redis/compose.yml" "${COMPOSE_DIR}/compose.yml"
     if [ $? -eq 0 ]; then
         echo "✓ Docker Compose 配置文件已下载"
     else
@@ -172,10 +152,10 @@ EOF
         echo ""
         echo "连接信息:"
         echo "  容器名: redis (仅 Docker 网络内访问)"
-        echo "  密码: ${redisPassword}"
+        echo "  密码: 未启用"
         echo ""
         echo "连接字符串:"
-        echo "  redis://:${redisPassword}@redis:6379"
+        echo "  redis://redis:6379"
         echo ""
         echo "⚠ 注意: 端口未暴露到宿主机，仅供容器间访问"
         echo ""

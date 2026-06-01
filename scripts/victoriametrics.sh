@@ -110,15 +110,20 @@ EOF
     echo ""
     echo "下载临时配置文件..."
 
-    wget -O "${TEMP_DIR}/victoriametrics.yml" "${GITHUB_BASE}/temp/victoriametrics.yml"
+    download_project_file "temp/victoriametrics.yml" "${TEMP_DIR}/victoriametrics.yml"
     if [ $? -eq 0 ]; then
         echo "✓ 临时配置文件已下载"
 
         # 启动临时容器进行初始化
         echo "启动临时容器初始化目录..."
-        docker compose -f "${TEMP_DIR}/victoriametrics.yml" up -d
-        sleep 3
-        docker compose -f "${TEMP_DIR}/victoriametrics.yml" down --volumes
+        if docker compose -f "${TEMP_DIR}/victoriametrics.yml" up -d; then
+            sleep 3
+            docker compose -f "${TEMP_DIR}/victoriametrics.yml" down --volumes
+        else
+            echo "✗ 临时容器初始化失败"
+            docker compose -f "${TEMP_DIR}/victoriametrics.yml" down --volumes >/dev/null 2>&1 || true
+            return 1
+        fi
         echo "✓ 目录初始化完成"
     else
         echo "⚠ 警告: 临时配置文件下载失败，跳过初始化步骤"
@@ -128,11 +133,16 @@ EOF
     echo ""
     echo "下载 Docker Compose 配置文件..."
 
-    wget -O "${COMPOSE_DIR}/compose.yml" "${GITHUB_BASE}/compose/victoriametrics/compose.yml"
+    download_project_file "compose/victoriametrics/compose.yml" "${COMPOSE_DIR}/compose.yml"
     if [ $? -eq 0 ]; then
         # 使用 sed 替换用户名和密码占位符
-        sed -i "s/__USERNAME__/${VM_USERNAME}/g" "${COMPOSE_DIR}/compose.yml"
-        sed -i "s/__PASSWORD__/${VM_PASSWORD}/g" "${COMPOSE_DIR}/compose.yml"
+        local escaped_username
+        local escaped_password
+        escaped_username=$(printf '%s' "$VM_USERNAME" | sed 's/[\/&]/\\&/g')
+        escaped_password=$(printf '%s' "$VM_PASSWORD" | sed 's/[\/&]/\\&/g')
+        sed -i "s/__USERNAME__/${escaped_username}/g" "${COMPOSE_DIR}/compose.yml"
+        sed -i "s/__PASSWORD__/${escaped_password}/g" "${COMPOSE_DIR}/compose.yml"
+        chmod 600 "${COMPOSE_DIR}/compose.yml" "${DATA_DIR}/README.txt"
 
         echo "✓ Docker Compose 配置文件已下载并配置"
     else

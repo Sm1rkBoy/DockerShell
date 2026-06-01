@@ -17,13 +17,17 @@ install_vaultwarden() {
 
     # 创建必要的目录
     echo "创建目录结构..."
-    mkdir -p "${DATA_DIR}"/{apps,backup}
+    mkdir -p "${DATA_DIR}"/{apps,backup,log}
     mkdir -p "${COMPOSE_DIR}"
 
     echo "✓ 端口: 80 (仅容器内部访问，未暴露到宿主机)"
 
     # 生成管理员 Token
     ADMIN_TOKEN=$(openssl rand -base64 48)
+
+    read -p "是否允许用户注册 (默认 false): " SIGNUPS_ALLOWED
+    SIGNUPS_ALLOWED=${SIGNUPS_ALLOWED:-false}
+    echo "✓ 用户注册: ${SIGNUPS_ALLOWED}"
 
     echo ""
     echo "保存配置信息..."
@@ -34,7 +38,7 @@ install_vaultwarden() {
 ADMIN_TOKEN=${ADMIN_TOKEN}
 
 # 基础设置
-SIGNUPS_ALLOWED=true
+SIGNUPS_ALLOWED=${SIGNUPS_ALLOWED}
 INVITATIONS_ALLOWED=true
 SHOW_PASSWORD_HINT=false
 
@@ -89,10 +93,12 @@ docker start vaultwarden
 
 首次使用:
 -----------
-1. 通过 Nginx 或端口映射访问 Web 界面
-2. 创建第一个账户（首次注册后建议关闭注册）
-3. 访问 /admin 管理容器
-4. 使用上面的 Token 登录管理面板
+1. 如需开放注册，先编辑 ${COMPOSE_DIR}/vaultwarden.env
+2. 将 SIGNUPS_ALLOWED 修改为 true 并重启容器
+3. 通过 Nginx 或端口映射访问 Web 界面
+4. 创建账户后建议重新关闭注册
+5. 访问 /admin 管理容器
+6. 使用上面的 Token 登录管理面板
 
 关闭注册:
 -----------
@@ -123,7 +129,9 @@ EOF
     echo ""
     echo "下载 Docker Compose 配置文件..."
 
-    wget -O "${COMPOSE_DIR}/compose.yml" "${GITHUB_BASE}/compose/vaultwarden/compose.yml"
+    chmod 600 "${COMPOSE_DIR}/vaultwarden.env" "${DATA_DIR}/README.txt"
+
+    download_project_file "compose/vaultwarden/compose.yml" "${COMPOSE_DIR}/compose.yml"
     if [ $? -eq 0 ]; then
         echo "✓ Docker Compose 配置文件已下载"
     else
@@ -157,8 +165,8 @@ EOF
         echo "配置文件: ${DATA_DIR}/README.txt"
         echo ""
         echo "⚠ 重要提示:"
-        echo "  1. 首次访问请先创建账户"
-        echo "  2. 创建账户后建议关闭注册功能"
+        echo "  1. 默认已关闭公开注册"
+        echo "  2. 如需创建账户，请先临时开启 SIGNUPS_ALLOWED"
         echo "  3. 管理员 Token 已保存在配置文件中"
         echo ""
         echo "等待 Vaultwarden 启动完成..."

@@ -31,9 +31,12 @@ install_grafana() {
     GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-grafana}
     echo "✓ 管理员用户名: $GF_SECURITY_ADMIN_USER"
 
-    read -s -p "请输入管理员密码 (默认 12345678): " GF_SECURITY_ADMIN_PASSWORD
+    read -s -p "请输入管理员密码 (留空自动生成): " GF_SECURITY_ADMIN_PASSWORD
     echo ""
-    GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-12345678}
+    if [ -z "$GF_SECURITY_ADMIN_PASSWORD" ]; then
+        GF_SECURITY_ADMIN_PASSWORD=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 20)
+        echo "✓ 已生成随机管理员密码: $GF_SECURITY_ADMIN_PASSWORD"
+    fi
     echo "✓ 已设置管理员密码"
 
     read -p "是否允许用户注册 (默认 false): " GF_USERS_ALLOW_SIGN_UP
@@ -112,29 +115,33 @@ EOF
 
     echo "✓ 说明文件已保存到: ${DATA_DIR}/README.txt"
 
-    # 下载临时 compose 文件用于初始化
+    chmod 600 "${COMPOSE_DIR}/grafana.env" "${DATA_DIR}/README.txt"
+
+    # 使用临时容器提取默认 grafana.ini
     echo ""
-    echo "下载临时配置文件..."
+    echo "初始化 Grafana 默认配置..."
 
-    wget -O "${TEMP_DIR}/grafana.yml" "${GITHUB_BASE}/temp/grafana.yml"
-    if [ $? -eq 0 ]; then
-        echo "✓ 临时配置文件已下载"
-
-        # 启动临时容器进行初始化
-        echo "启动临时容器初始化目录..."
-        docker compose -f "${TEMP_DIR}/grafana.yml" up -d
-        sleep 3
-        docker compose -f "${TEMP_DIR}/grafana.yml" down --volumes
-        echo "✓ 目录初始化完成"
+    mkdir -p "${DATA_DIR}/config/provisioning"
+    docker rm -f grafana-config-init >/dev/null 2>&1 || true
+    if docker create --name grafana-config-init grafana/grafana:latest >/dev/null; then
+        if docker cp grafana-config-init:/etc/grafana/grafana.ini "${DATA_DIR}/config/grafana.ini"; then
+            echo "✓ grafana.ini 已初始化"
+            docker rm -f grafana-config-init >/dev/null 2>&1 || true
+        else
+            docker rm -f grafana-config-init >/dev/null 2>&1 || true
+            echo "✗ grafana.ini 初始化失败"
+            return 1
+        fi
     else
-        echo "⚠ 警告: 临时配置文件下载失败，跳过初始化步骤"
+        echo "✗ 临时容器创建失败，无法初始化 grafana.ini"
+        return 1
     fi
 
     # 下载正式 compose 文件
     echo ""
     echo "下载 Docker Compose 配置文件..."
 
-    wget -O "${COMPOSE_DIR}/compose.yml" "${GITHUB_BASE}/compose/grafana/compose.yml"
+    download_project_file "compose/grafana/compose.yml" "${COMPOSE_DIR}/compose.yml"
     if [ $? -eq 0 ]; then
         echo "✓ Docker Compose 配置文件已下载"
     else

@@ -17,9 +17,17 @@ WHITE='\033[1;37m'
 NC='\033[0m' # No Color
 
 # 配置变量
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
 GITHUB_SCRIPTS_BASE="https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main/scripts"
+GITHUB_PROJECT_BASE="https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main"
 DOCKER_DATA_DIR="/opt/docker"
 NETWORK_NAME="universal"
+
+if [ -n "$SCRIPT_DIR" ] && [ -d "$SCRIPT_DIR/scripts" ] && [ -d "$SCRIPT_DIR/compose" ]; then
+    DOCKERSHELL_PROJECT_DIR="$SCRIPT_DIR"
+else
+    DOCKERSHELL_PROJECT_DIR=""
+fi
 
 # 支持的容器列表
 declare -A CONTAINERS=(
@@ -82,6 +90,40 @@ command_exists() {
     command -v "$1" &> /dev/null
 }
 
+# 检查运行依赖
+check_dependencies() {
+    local missing=()
+
+    for cmd in curl wget openssl tar; do
+        if ! command_exists "$cmd"; then
+            missing+=("$cmd")
+        fi
+    done
+
+    if [ ${#missing[@]} -gt 0 ]; then
+        print_error "缺少必要依赖: ${missing[*]}"
+        print_info "请先安装这些命令后重试"
+        exit 1
+    fi
+}
+
+# 从本地项目复制文件；没有本地项目时从 GitHub 下载
+download_project_file() {
+    local relative_path=$1
+    local output_path=$2
+    local local_file=""
+
+    if [ -n "$DOCKERSHELL_PROJECT_DIR" ]; then
+        local_file="$DOCKERSHELL_PROJECT_DIR/$relative_path"
+        if [ -f "$local_file" ]; then
+            cp "$local_file" "$output_path"
+            return $?
+        fi
+    fi
+
+    wget -O "$output_path" "$GITHUB_PROJECT_BASE/$relative_path"
+}
+
 # ========================================
 # Docker 检查和初始化
 # ========================================
@@ -104,6 +146,13 @@ check_docker() {
         echo ""
         print_info "请启动 Docker 服务："
         echo "  systemctl start docker"
+        exit 1
+    fi
+
+    if ! docker compose version &> /dev/null; then
+        print_error "Docker Compose 未安装或不可用"
+        echo ""
+        print_info "请安装 Docker Compose v2，并确认 docker compose version 可正常执行"
         exit 1
     fi
 
@@ -143,6 +192,7 @@ check_data_directory() {
 init_environment() {
     print_header
     echo ""
+    check_dependencies
     check_docker
     check_docker_network
     check_data_directory
@@ -196,19 +246,31 @@ container_running() {
 install_container() {
     local container=$1
     local script_url="$GITHUB_SCRIPTS_BASE/$container.sh"
+    local local_script=""
 
     print_info "正在下载 $container 安装脚本..."
-
-    # 检查脚本是否存在
-    if ! curl -s --head "$script_url" | grep -q "HTTP/.*200"; then
-        print_error "安装脚本不存在: $script_url"
-        return 1
-    fi
 
     # 下载并执行脚本
     print_info "正在安装 $container..."
     echo ""
-    if source <(curl -s "$script_url"); then
+
+    if [ -n "$DOCKERSHELL_PROJECT_DIR" ]; then
+        local_script="$DOCKERSHELL_PROJECT_DIR/scripts/$container.sh"
+    fi
+
+    if [ -n "$local_script" ] && [ -f "$local_script" ]; then
+        source "$local_script"
+    else
+        # 检查脚本是否存在
+        if ! curl -fsSL --head "$script_url" | grep -q "HTTP/.*200"; then
+            print_error "安装脚本不存在: $script_url"
+            return 1
+        fi
+
+        source <(curl -fsSL "$script_url")
+    fi
+
+    if [ $? -eq 0 ]; then
         local install_function="install_$container"
         if declare -f "$install_function" > /dev/null; then
             $install_function
@@ -879,6 +941,12 @@ handle_command_line() {
 # 主程序入口
 # ========================================
 
+# 处理帮助参数时不要求 root 或 Docker 环境
+if [ $# -eq 1 ] && [ "$1" = "help" -o "$1" = "-h" -o "$1" = "--help" ]; then
+    show_help
+    exit 0
+fi
+
 # 检查是否为 root 用户
 if [ "$EUID" -ne 0 ]; then
     print_error "请使用 root 用户运行此脚本"
@@ -892,9 +960,6 @@ init_environment
 if [ $# -eq 0 ]; then
     # 无参数，显示交互式菜单
     main_menu
-elif [ $# -eq 1 ] && [ "$1" = "help" -o "$1" = "-h" -o "$1" = "--help" ]; then
-    # 显示帮助
-    show_help
 elif [ $# -ge 2 ]; then
     # 命令行模式（支持批量操作）
     handle_command_line "$@"

@@ -17,7 +17,7 @@ install_mysql() {
 
     # 创建必要的目录
     echo "创建目录结构..."
-    mkdir -p "${DATA_DIR}"/{apps,config,log,backup}
+    mkdir -p "${DATA_DIR}"/{apps,log,backup}
     mkdir -p "${COMPOSE_DIR}"
 
     # 提示用户输入配置
@@ -95,7 +95,7 @@ EOF
     echo ""
     echo "下载 Docker Compose 配置文件..."
 
-    wget -O "${COMPOSE_DIR}/compose.yml" "${GITHUB_BASE}/compose/mysql/compose.yml"
+    download_project_file "compose/mysql/compose.yml" "${COMPOSE_DIR}/compose.yml"
     if [ $? -eq 0 ]; then
         echo "✓ Docker Compose 配置文件已下载"
     else
@@ -103,33 +103,7 @@ EOF
         return 1
     fi
 
-    # 创建自定义配置文件
-    cat > "${DATA_DIR}/config/custom.cnf" <<'EOF'
-[mysqld]
-# 字符集设置
-character-set-server = utf8mb4
-collation-server = utf8mb4_unicode_ci
-
-# 性能优化
-max_connections = 500
-max_allowed_packet = 64M
-innodb_buffer_pool_size = 256M
-innodb_log_file_size = 64M
-
-# 日志设置
-log_error = /var/log/mysql/error.log
-slow_query_log = 1
-slow_query_log_file = /var/log/mysql/slow.log
-long_query_time = 2
-
-# 时区设置
-default-time-zone = '+08:00'
-
-[client]
-default-character-set = utf8mb4
-EOF
-
-    echo "✓ MySQL 配置文件已创建"
+    chmod 600 "${COMPOSE_DIR}/mysql.env" "${DATA_DIR}/README.txt"
 
     # 启动容器
     echo ""

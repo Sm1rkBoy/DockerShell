@@ -113,15 +113,20 @@ EOF
     echo ""
     echo "下载临时配置文件..."
 
-    wget -O "${TEMP_DIR}/prometheus.yml" "${GITHUB_BASE}/temp/prometheus.yml"
+    download_project_file "temp/prometheus.yml" "${TEMP_DIR}/prometheus.yml"
     if [ $? -eq 0 ]; then
         echo "✓ 临时配置文件已下载"
 
         # 启动临时容器进行初始化
         echo "启动临时容器初始化目录..."
-        docker compose -f "${TEMP_DIR}/prometheus.yml" up -d
-        sleep 3
-        docker compose -f "${TEMP_DIR}/prometheus.yml" down --volumes
+        if docker compose -f "${TEMP_DIR}/prometheus.yml" up -d; then
+            sleep 3
+            docker compose -f "${TEMP_DIR}/prometheus.yml" down --volumes
+        else
+            echo "✗ 临时容器初始化失败"
+            docker compose -f "${TEMP_DIR}/prometheus.yml" down --volumes >/dev/null 2>&1 || true
+            return 1
+        fi
 
         # 删除临时生成的目录链接
         rm -f "${DATA_DIR}/config/console_libraries" 2>/dev/null || true
@@ -136,7 +141,7 @@ EOF
     echo ""
     echo "下载 Docker Compose 配置文件..."
 
-    wget -O "${COMPOSE_DIR}/compose.yml" "${GITHUB_BASE}/compose/prometheus/compose.yml"
+    download_project_file "compose/prometheus/compose.yml" "${COMPOSE_DIR}/compose.yml"
     if [ $? -eq 0 ]; then
         echo "✓ Docker Compose 配置文件已下载"
     else

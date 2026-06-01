@@ -27,18 +27,18 @@ DockerShell 是一个基于 **纯 Shell 脚本** 的 Docker 容器一键安装�
 
 ## 🎯 支持的容器
 
-| 容器 | 描述 | 默认端口 |
+| 容器 | 描述 | 默认访问 |
 |------|------|----------|
-| MySQL | MySQL 数据库 | 3306 |
-| PostgreSQL | PostgreSQL 数据库 | 5432 |
-| Redis | Redis 缓存 | 6379 |
-| Nginx | Nginx 反向代理 | 80/443 |
+| MySQL | MySQL 数据库 | 内部 3306 |
+| PostgreSQL | PostgreSQL 数据库 | 内部 5432 |
+| Redis | Redis 缓存 | 内部 6379 |
+| Nginx | Nginx 反向代理 | 宿主机 80/443 |
 | Watchtower | 容器自动更新 | - |
-| phpMyAdmin | MySQL 管理工具 | 8080 |
-| Vaultwarden | 密码管理器 | 8000 |
-| Grafana | 监控面板 | 3000 |
-| Prometheus | 监控系统 | 9090 |
-| VictoriaMetrics | 时序数据库 | 8428 |
+| phpMyAdmin | MySQL 管理工具 | 内部 80 |
+| Vaultwarden | 密码管理器 | 内部 80 |
+| Grafana | 监控面板 | 内部 3000 |
+| Prometheus | 监控系统 | 内部 9090 |
+| VictoriaMetrics | 时序数据库 | 内部 8428 |
 
 ## 🚀 快速开始
 
@@ -141,7 +141,7 @@ chmod +x start.sh
 #### 1. 安装容器
 
 - 输入容器名称（如 `mysql`、`redis`）
-- 根据提示配置参数（端口、密码等）
+- 根据提示配置参数（密码、资源限制等）
 - 系统自动创建配置文件和数据目录
 - 自动启动容器并验证运行状态
 
@@ -186,7 +186,7 @@ chmod +x start.sh
 │   └── ...
 ├── mysql/                # MySQL 容器数据
 │   ├── apps/            # 数据文件
-│   ├── config/          # 配置文件
+│   ├── config/          # 配置文件（部分容器使用）
 │   ├── log/             # 日志文件
 │   ├── backup/          # 备份目录
 │   └── README.txt       # 使用说明
@@ -196,8 +196,10 @@ chmod +x start.sh
 
 ## 🔐 安全说明
 
-- **密码管理**：所有密码都保存在对应容器的 `.env` 文件和 `README.txt` 中
-- **自动生成**：如果不输入密码，系统会自动生成强密码
+- **密码管理**：需要密码的服务会把凭据保存在对应容器的 `.env` 文件和 `README.txt` 中
+- **自动生成**：MySQL、PostgreSQL、Grafana 等服务如果不输入密码，系统会自动生成强密码
+- **Redis**：默认不启用密码，仅在 Docker 内部网络中访问
+- **Vaultwarden**：默认关闭公开注册，可在 `/opt/docker/compose/vaultwarden/vaultwarden.env` 中按需开启
 - **权限控制**：脚本需要 root 权限运行
 - **网络隔离**：所有容器运行在独立的 `universal` 网络中
 
@@ -256,8 +258,11 @@ docker volume prune -f
 
 ### 修改端口
 
-1. 编辑环境文件：`/opt/docker/compose/<容器名>/<容器名>.env`
-2. 重新创建容器：
+默认只有 Nginx 暴露宿主机 `80/443`，其他服务仅在 Docker 网络内访问。如需额外暴露端口：
+
+1. 编辑 Compose 文件：`/opt/docker/compose/<容器名>/compose.yml`
+2. 添加或修改 `ports` 映射
+3. 重新创建容器：
    ```bash
    docker compose -f /opt/docker/compose/<容器名>/compose.yml up -d --force-recreate
    ```

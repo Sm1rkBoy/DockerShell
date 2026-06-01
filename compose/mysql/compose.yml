@@ -10,7 +10,6 @@ services:
             - /etc/localtime:/etc/localtime:ro
             - /opt/docker/mysql/apps:/var/lib/mysql
             - /opt/docker/mysql/log:/var/log/mysql
-            - /opt/docker/mysql/config/my.cnf.d:/etc/my.cnf.d
         command:
             - --character-set-server=utf8mb4
             - --collation-server=utf8mb4_general_ci

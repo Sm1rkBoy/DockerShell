@@ -8,6 +8,8 @@ install_nginx(){
     local CONTAINER_NAME="nginx"
     local DATA_DIR="/opt/docker/${CONTAINER_NAME}"
     local COMPOSE_DIR="/opt/docker/compose/${CONTAINER_NAME}"
+    local TEMP_DIR="/opt/docker/temp"
+    local INIT_CONTAINER_NAME="nginx-config-init"
     local GITHUB_BASE="https://raw.githubusercontent.com/Sm1rkBoy/DockerShell/main"
 
     echo "========================================"
@@ -19,28 +21,60 @@ install_nginx(){
     echo "创建目录结构..."
     mkdir -p "${DATA_DIR}"/{config/conf.d,html,log,ssl}
     mkdir -p "${COMPOSE_DIR}"
+    mkdir -p "${TEMP_DIR}"
 
-    # 端口配置
-    read -p "请输入 HTTP 端口 (默认 80): " http_port
-    http_port=${http_port:-80}
-    echo "✓ HTTP 端口: $http_port"
+    echo "✓ HTTP 端口: 80"
+    echo "✓ HTTPS 端口: 443"
 
-    read -p "请输入 HTTPS 端口 (默认 443): " https_port
-    https_port=${https_port:-443}
-    echo "✓ HTTPS 端口: $https_port"
+    echo ""
+    echo "初始化 Nginx 默认文件..."
+
+    # 使用不挂载宿主机目录的临时容器提取镜像内默认文件，避免正式容器启动时
+    # /opt/docker/nginx/config 覆盖 /etc/nginx 后缺少 mime.types 等默认文件。
+    local EXTRACT_DIR
+    EXTRACT_DIR=$(mktemp -d "${TEMP_DIR}/nginx-defaults.XXXXXX")
+    if [ -z "$EXTRACT_DIR" ] || [ ! -d "$EXTRACT_DIR" ]; then
+        echo "✗ 临时目录创建失败"
+        return 1
+    fi
+
+    mkdir -p "${EXTRACT_DIR}"/{config,html}
+    docker rm -f "$INIT_CONTAINER_NAME" >/dev/null 2>&1 || true
+
+    if docker run -d --name "$INIT_CONTAINER_NAME" nginx:latest >/dev/null; then
+        sleep 2
+
+        if docker cp "${INIT_CONTAINER_NAME}:/etc/nginx/." "${EXTRACT_DIR}/config/" \
+            && docker cp "${INIT_CONTAINER_NAME}:/usr/share/nginx/html/." "${EXTRACT_DIR}/html/"; then
+            cp -an "${EXTRACT_DIR}/config/." "${DATA_DIR}/config/"
+            cp -an "${EXTRACT_DIR}/html/." "${DATA_DIR}/html/"
+            docker rm -f "$INIT_CONTAINER_NAME" >/dev/null 2>&1 || true
+            rm -rf "$EXTRACT_DIR"
+            echo "✓ Nginx 默认文件已初始化"
+        else
+            docker rm -f "$INIT_CONTAINER_NAME" >/dev/null 2>&1 || true
+            rm -rf "$EXTRACT_DIR"
+            echo "✗ Nginx 默认文件拷贝失败"
+            return 1
+        fi
+    else
+        docker rm -f "$INIT_CONTAINER_NAME" >/dev/null 2>&1 || true
+        rm -rf "$EXTRACT_DIR"
+        echo "✗ 临时 Nginx 容器启动失败"
+        return 1
+    fi
+
+    if [ ! -f "${DATA_DIR}/config/mime.types" ]; then
+        echo "✗ ${DATA_DIR}/config/mime.types 不存在，停止启动正式容器"
+        return 1
+    fi
 
     echo ""
     echo "保存配置信息..."
 
-    # 保存环境变量
-    cat > "${COMPOSE_DIR}/nginx.env" <<EOF
-HTTP_PORT=${http_port}
-HTTPS_PORT=${https_port}
-TZ=Asia/Shanghai
-EOF
-
     # 创建默认 nginx 配置
-    cat > "${DATA_DIR}/config/nginx.conf" <<'EOF'
+    if [ ! -f "${DATA_DIR}/config/nginx.conf" ]; then
+        cat > "${DATA_DIR}/config/nginx.conf" <<'EOF'
 user  nginx;
 worker_processes  auto;
 
@@ -76,9 +110,11 @@ http {
     include /etc/nginx/conf.d/*.conf;
 }
 EOF
+    fi
 
     # 创建默认站点配置
-    cat > "${DATA_DIR}/config/conf.d/default.conf" <<'EOF'
+    if [ ! -f "${DATA_DIR}/config/conf.d/default.conf" ]; then
+        cat > "${DATA_DIR}/config/conf.d/default.conf" <<'EOF'
 server {
     listen       80;
     listen  [::]:80;
@@ -95,9 +131,11 @@ server {
     }
 }
 EOF
+    fi
 
     # 创建默认主页
-    cat > "${DATA_DIR}/html/index.html" <<'EOF'
+    if [ ! -f "${DATA_DIR}/html/index.html" ]; then
+        cat > "${DATA_DIR}/html/index.html" <<'EOF'
 <!DOCTYPE html>
 <html>
 <head>
@@ -133,6 +171,7 @@ EOF
 </body>
 </html>
 EOF
+    fi
 
     # 保存说明文件
     cat > "${DATA_DIR}/README.txt" <<EOF
@@ -143,8 +182,8 @@ Nginx 容器信息
 
 访问信息:
 -----------
-HTTP: http://localhost:${http_port}
-HTTPS: https://localhost:${https_port}
+HTTP: http://localhost:80
+HTTPS: https://localhost:443
 
 目录说明:
 -----------
@@ -180,7 +219,7 @@ EOF
     echo ""
     echo "下载 Docker Compose 配置文件..."
 
-    wget -O "${COMPOSE_DIR}/compose.yml" "${GITHUB_BASE}/compose/nginx/compose.yml"
+    download_project_file "compose/nginx/compose.yml" "${COMPOSE_DIR}/compose.yml"
     if [ $? -eq 0 ]; then
         echo "✓ Docker Compose 配置文件已下载"
     else
@@ -199,8 +238,8 @@ EOF
         echo "========================================"
         echo ""
         echo "访问地址:"
-        echo "  HTTP: http://localhost:${http_port}"
-        echo "  HTTPS: https://localhost:${https_port}"
+        echo "  HTTP: http://localhost:80"
+        echo "  HTTPS: https://localhost:443"
         echo ""
         echo "配置目录: ${DATA_DIR}"
         echo "说明文件: ${DATA_DIR}/README.txt"
@@ -208,7 +247,7 @@ EOF
         echo "等待 Nginx 启动完成..."
         sleep 2
 
-        if docker ps | grep -q "nginx"; then
+        if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
             echo "✓ Nginx 容器运行正常"
         else
             echo "⚠ Nginx 容器可能未正常启动，请检查日志"

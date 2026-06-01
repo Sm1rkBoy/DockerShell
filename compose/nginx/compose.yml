@@ -7,6 +7,8 @@ services:
             universal: null
         volumes:
             - /opt/docker/nginx/config:/etc/nginx
+            - /opt/docker/nginx/html:/usr/share/nginx/html
+            - /opt/docker/nginx/ssl:/etc/nginx/ssl:ro
             - /opt/docker/nginx/log:/var/log/nginx 
         ports:
             - 80:80
